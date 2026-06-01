@@ -161,6 +161,7 @@ function cardEl(o) {
       ${dueTag(o.due)}
       ${o.effort ? `<span class="tag">⏱ ${esc(o.effort)}h</span>` : ''}
       ${o.requires512 ? '<span class="tag tag-512">🔒 nur 512 · Kontur</span>' : ''}
+      ${openLog(o) ? '<span class="tag tag-run">⏱ läuft</span>' : ''}
       ${flagTags(o.flags)}
     </div>
     ${moveButtons}`;
@@ -354,10 +355,21 @@ function refreshDetail() {
           </label>`).join('')}
       </div>
     </div>
+    <div class="time-box">
+      <h3>Zeiterfassung</h3>
+      <div class="time-row">
+        <span>Soll: <strong>${o.effort ? fmtH(o.effort * 3600) : '—'}</strong></span>
+        <span>Ist: <strong>${fmtH(istSeconds(o))}</strong></span>
+        <button class="btn time-btn ${openLog(o) ? 'danger' : 'primary'}">${openLog(o) ? '⏹ Arbeit stoppen' : '▶ Arbeit starten'}</button>
+      </div>
+    </div>
     <div class="history">
       <h3>Verlauf</h3>
       <ul>${history}</ul>
     </div>`;
+
+  const tbtn = $('#detailContent').querySelector('.time-btn');
+  if (tbtn) tbtn.addEventListener('click', () => (openLog(o) ? stopWork(o) : startWork(o)));
 
   // Haekchen anklickbar machen -> speichert sofort fuer alle Geraete
   $('#detailContent').querySelectorAll('input[data-flag]').forEach((cb) => {
@@ -400,5 +412,127 @@ function formatDate(iso) {
 function formatDateTime(ts) {
   return new Date(ts).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
+
+/* ----------------------------------------------------------------------------
+ * Zeiterfassung (Ist vs. Soll) – Zeiten haengen am Auftrag (timeLogs)
+ * -------------------------------------------------------------------------- */
+function openLog(o) { return (o.timeLogs || []).find((l) => !l.endedAt); }
+
+function istSeconds(o) {
+  const now = Date.now();
+  return (o.timeLogs || []).reduce((s, l) =>
+    s + (l.endedAt ? (l.seconds || 0) : Math.max(0, Math.round((now - l.startedAt) / 1000))), 0);
+}
+function fmtH(seconds) { return (seconds / 3600).toFixed(1).replace('.', ',') + ' h'; }
+
+function putOrder(id, body) {
+  return fetch(`/api/orders/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, by: rememberName() }),
+  });
+}
+async function startWork(o) {
+  if (openLog(o)) return;
+  const logs = [...(o.timeLogs || []), { stationId: o.stationId, by: rememberName(), startedAt: Date.now(), endedAt: null, seconds: 0 }];
+  await putOrder(o.id, { timeLogs: logs });
+}
+async function stopWork(o) {
+  const logs = (o.timeLogs || []).map((l) => {
+    if (l.endedAt) return l;
+    const end = Date.now();
+    return { ...l, endedAt: end, seconds: Math.max(0, Math.round((end - l.startedAt) / 1000)) };
+  });
+  await putOrder(o.id, { timeLogs: logs });
+}
+
+/* ----------------------------------------------------------------------------
+ * Auswertung / KPIs (berechnet aus den Auftragsdaten)
+ * -------------------------------------------------------------------------- */
+function openKpi() {
+  const done = orders.filter((o) => o.stationId === 'fertig');
+  const open = orders.filter((o) => o.stationId !== 'fertig');
+
+  // Termintreue
+  let puenktlich = 0; let spaet = 0;
+  for (const o of done) {
+    if (!o.due) continue;
+    const f = [...o.history].reverse().find((h) => h.stationId === 'fertig');
+    if (!f) continue;
+    const dueEnd = new Date(o.due + 'T23:59:59').getTime();
+    if (f.at <= dueEnd) puenktlich++; else spaet++;
+  }
+  const treue = (puenktlich + spaet) ? Math.round((100 * puenktlich) / (puenktlich + spaet)) : null;
+
+  // Durchlaufzeit (Anlage -> fertig)
+  let dlSum = 0; let dlN = 0;
+  for (const o of done) {
+    const f = [...o.history].reverse().find((h) => h.stationId === 'fertig');
+    const start = o.createdAt || (o.history[0] && o.history[0].at);
+    if (f && start) { dlSum += f.at - start; dlN++; }
+  }
+  const dlTage = dlN ? (dlSum / dlN / 86400000).toFixed(1).replace('.', ',') : '—';
+
+  // Stunden Ist/Soll
+  const sollH = orders.reduce((s, o) => s + (o.effort || 0), 0);
+  const istH = orders.reduce((s, o) => s + istSeconds(o), 0) / 3600;
+
+  // Offene Last je Station
+  const per = stations.map((st) => {
+    const list = open.filter((o) => o.stationId === st.id);
+    return { st, count: list.length, soll: list.reduce((s, o) => s + (o.effort || 0), 0) };
+  });
+  const maxSoll = Math.max(1, ...per.map((p) => p.soll));
+
+  const card = (label, value, sub) => `<div class="kpi-card"><div class="kpi-val">${value}</div><div class="kpi-lbl">${label}</div>${sub ? `<div class="kpi-sub">${sub}</div>` : ''}</div>`;
+
+  $('#kpiContent').innerHTML = `
+    <h2 class="detail-title">📊 Auswertung</h2>
+    <div class="kpi-grid">
+      ${card('Offene Auftraege', open.length, `${done.length} erledigt`)}
+      ${card('Termintreue', treue == null ? '—' : treue + '%', `${puenktlich} pünktlich / ${spaet} zu spät`)}
+      ${card('Ø Durchlaufzeit', dlTage + ' T', 'Anlage bis fertig')}
+      ${card('Stunden Ist / Soll', fmtH(istH * 3600), 'Soll ' + sollH.toFixed(1).replace('.', ',') + ' h')}
+    </div>
+    <h3 style="margin:18px 0 8px">Offene Last je Station</h3>
+    <div class="kpi-bars">
+      ${per.map((p) => `
+        <div class="kpi-bar-row">
+          <span class="kpi-bar-name"><span class="dot" style="background:${p.st.color}"></span>${esc(p.st.name)}</span>
+          <span class="kpi-bar-track"><span class="kpi-bar-fill" style="width:${Math.round((p.soll / maxSoll) * 100)}%;background:${p.st.color}"></span></span>
+          <span class="kpi-bar-num">${p.count} Auftr. · ${p.soll.toFixed(1).replace('.', ',')} h</span>
+        </div>`).join('')}
+    </div>`;
+  kpiDialog.showModal();
+}
+const kpiDialog = $('#kpiDialog');
+$('#kpiBtn').addEventListener('click', openKpi);
+$('#closeKpi').addEventListener('click', () => kpiDialog.close());
+
+/* ----------------------------------------------------------------------------
+ * CSV-Export (fuer den Abgleich mit Excel) – UTF-8 mit BOM, Semikolon-getrennt
+ * -------------------------------------------------------------------------- */
+function exportCsv() {
+  const head = ['Auftrags-Nummer', 'Pos', 'Kunde', 'Objekt', 'Beschrieb', 'Aufwand_h', 'Termin', 'Station', 'Maschinist', 'Status', 'Ist_h', 'Bemerkung'];
+  const stName = (id) => { const s = stations.find((x) => x.id === id); return s ? s.name : id; };
+  const cell = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows = orders.map((o) => [
+    o.number, o.pos || '', o.customer || '', o.object || '', o.title || '',
+    o.effort != null ? o.effort : '', o.due || '', stName(o.stationId), o.assignee || '',
+    Object.entries(o.flags || {}).filter(([, v]) => v).map(([k]) => k).join(' '),
+    (istSeconds(o) / 3600).toFixed(2), o.notes || '',
+  ].map(cell).join(';'));
+  const csv = '﻿' + head.join(';') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bsag-auftraege-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+$('#exportBtn').addEventListener('click', exportCsv);
 
 init();

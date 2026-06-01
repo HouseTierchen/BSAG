@@ -8,7 +8,7 @@
  * lokal im Browser gespeichert (localStorage), es gibt keine Live-Synchro
  * zwischen Geraeten. Zum echten Mehrgeraete-Betrieb dient server.js.
  *
- * Aufruf:  node make-preview.js   (nutzt data.json, sonst die Seed-Daten)
+ * Aufruf:  node make-preview.js   (liest die aktuelle Datenbank)
  */
 
 const fs = require('fs');
@@ -33,7 +33,7 @@ let html = read('public/index.html');
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview_v5';
+const __KEY = 'bsag_preview_v6';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
@@ -81,7 +81,7 @@ window.fetch = async (url, opts) => {
   if (m) {
     const o = __find(m[1]); if (!o) return __resp({ error: 'nicht gefunden' }, 404);
     if (method === 'PUT') {
-      for (const f of ['number','pos','customer','object','title','effort','priority','assignee','due','notes','flags'])
+      for (const f of ['number','pos','customer','object','title','effort','priority','assignee','due','notes','flags','timeLogs'])
         if (body[f] !== undefined) o[f] = body[f];
       o.updatedAt = now; __save(); __emit('order:updated', o); return __resp(o);
     }

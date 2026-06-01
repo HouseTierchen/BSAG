@@ -22,6 +22,8 @@
         <option value="tief">Nur Tief</option>
       </select>
       <span id="status" class="status" title="Live-Verbindung">●</span>
+      <button id="kpiBtn" class="btn" title="Auswertung / Kennzahlen">📊 Auswertung</button>
+      <button id="exportBtn" class="btn" title="Als CSV fuer Excel exportieren">⬇ Export</button>
       <button id="newOrderBtn" class="btn primary">+ Auftrag</button>
     </div>
   </header>
@@ -94,6 +96,15 @@
       <button type="button" id="editFromDetail" class="btn">Bearbeiten</button>
       <span class="spacer"></span>
       <button type="button" id="closeDetail" class="btn primary">Schliessen</button>
+    </div>
+  </dialog>
+
+  <!-- Auswertung / KPIs -->
+  <dialog id="kpiDialog" class="dialog">
+    <div id="kpiContent"></div>
+    <div class="dialog-actions">
+      <span class="spacer"></span>
+      <button type="button" id="closeKpi" class="btn primary">Schliessen</button>
     </div>
   </dialog>
 

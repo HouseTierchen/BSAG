@@ -7,84 +7,115 @@ welcher Maschine / Station?**
 Läuft auf **Tablet** (Werkstatt), **Büro-PC** (Arbeitsvorbereitung) und **Smartphone** –
 alle Geräte sehen dieselben Daten **in Echtzeit**.
 
-> Status: **Prototyp / MVP.** Bewusst ohne externe Abhängigkeiten gebaut (nur Node.js),
-> damit er sich überall in Minuten starten lässt und einfach zu verstehen ist.
+---
+
+## Funktionen
+
+- **Kanban-Board** mit echtem Maschinenfluss:
+  `Warteschlange → CNC 511 / CNC 512 → Kantenleimen / Bankraum → Fertig`
+  (511/512 sind Alternativen; nach der CNC wählt man per „Weiter"-Knopf das Ziel).
+- **Automatische Maschinen-Zuteilung:** Aufträge mit „Kontur/Konturkante" gehen auf
+  **CNC 512** und sind für 511 gesperrt.
+- **Auftragsdaten** wie in der Excel: Auftrags-Nr., Pos, Kunde, Objekt, Beschrieb,
+  Aufwand (h), Termin Rampe, Maschinist, Bemerkung.
+- **Status-Häkchen** (KLM, Schmid Daniel, Mühlethalter Herbert, Hunn Celin,
+  Heuberger Markus, teilweise) – direkt am Tablet antippbar.
+- **Zeiterfassung** je Auftrag (Start/Stopp) → **Ist vs. Soll**-Stunden.
+- **Auswertung / KPIs:** Termintreue, Ø Durchlaufzeit, Stunden Ist/Soll,
+  offene Last je Station.
+- **CSV-Export** für den Abgleich zurück in die Excel.
+- **Live-Sync** über alle Geräte, **Verlauf** je Auftrag, **Termin-Warnungen**,
+  Suche/Filter, grosse fingerfreundliche Kacheln, helles Design.
+- **SQLite-Datenbank** mit **automatischem Backup** (kein externes Paket nötig).
 
 ---
 
-## Was kann es?
+## Schnellstart (lokal)
 
-- **Kanban-Board**: Eine Spalte pro Station/Maschine (Zuschnitt → Kantenanleimen →
-  CNC → Bohren → Oberfläche → Montage → QS → Versand → Erledigt).
-- **Aufträge als Karten** mit Nummer, Kunde, Bezeichnung, Priorität, Verantwortlichem
-  und Liefertermin.
-- **Weiterschieben** per Knopf (◀ / ▶) auf dem Tablet oder per **Drag & Drop** am PC.
-- **Live-Sync** über alle Geräte (Server-Sent Events) – kein Aktualisieren nötig.
-- **Verlauf pro Auftrag**: wer hat ihn wann auf welche Station gesetzt.
-- **Termin-Warnungen**: überfällige Aufträge rot, bald fällige gelb.
-- **Suchen & Filtern** nach Auftrag, Kunde, Person oder Priorität.
-
----
-
-## Starten
-
-Voraussetzung: **Node.js ≥ 18** ([nodejs.org](https://nodejs.org)).
+Voraussetzung: **Node.js ≥ 22** ([nodejs.org](https://nodejs.org)).
 
 ```bash
-npm start
-# oder:  node server.js
+node server.js        # bzw. npm start
+```
+Im Browser öffnen: **http://localhost:3000**
+Andere Geräte im selben Netz: `http://<rechner-ip>:3000`.
+
+Beim ersten Start wird – falls vorhanden – eine bestehende `data.json` einmalig in
+die Datenbank übernommen, sonst werden Demo-Aufträge angelegt.
+
+---
+
+## Betrieb auf der Synology DS1522+ (empfohlen)
+
+Die DS1522+ kann die App dauerhaft per **Container Manager (Docker)** betreiben.
+
+1. Diesen Projektordner auf die NAS kopieren (z.B. via File Station).
+2. **Container Manager → Projekt → erstellen**, Pfad auf den Ordner mit der
+   `docker-compose.yml` zeigen lassen, Projekt starten.
+3. Im Browser **http://\<NAS-IP\>:3000** öffnen.
+
+Die Daten liegen dauerhaft im Unterordner **`./data`** (`data.sqlite` + `backups/`)
+und überleben Updates/Neustarts des Containers. Port/Speicherort sind über die
+Umgebungsvariablen `PORT` und `DATA_DIR` einstellbar.
+
+Alternativ per Kommandozeile:
+```bash
+docker compose up -d --build
 ```
 
-Dann im Browser öffnen: **http://localhost:3000**
+---
 
-Andere Geräte im selben Netz (z.B. Werkstatt-Tablet) erreichen es über die
-IP des Server-Rechners, z.B. `http://192.168.1.50:3000`.
+## Excel-Abgleich
 
-Beim ersten Start werden Beispiel-Stationen und ein paar Demo-Aufträge angelegt
-(in `data.json`). Diese Datei ist die Datenbank – einfach löschen, um neu zu starten.
+Die App läuft **parallel zur Excel**. Ein Export der CNC-Liste als CSV lässt sich
+jederzeit abgleichen:
+
+```bash
+node import-csv.js <pfad-zur-datei.csv>
+```
+Dabei werden **beschreibende Felder** (Kunde, Objekt, Beschrieb, Aufwand, Termin)
+aus der Excel aktualisiert, während der **Werkstatt-Status** (Station, Häkchen,
+Verlauf, Zeiten) in der App erhalten bleibt. Neue Positionen werden ergänzt.
+Den **CSV-Export** aus der App (Knopf „⬇ Export") kann man umgekehrt in Excel öffnen.
+
+> Bei laufendem Server diesen nach einem Abgleich kurz neu starten.
 
 ---
 
 ## Stationen / Maschinen anpassen
 
-Die Liste der Stationen steht in `server.js` unter `DEFAULT_STATIONS`. Dort tragt ihr
-eure echten HOMAG-Maschinen und Handarbeitsplätze ein (Name, Maschine, Farbe).
-Nach einer Änderung `data.json` löschen, damit die neuen Stationen übernommen werden.
+Die Stationen inkl. Fluss (`next`) stehen in `db.js`-Seed bzw. in `server.js`
+(`DEFAULT_STATIONS`) und `import-csv.js` (`STATIONS`). Dort tragt ihr eure realen
+Maschinen ein (Name, Maschine, Farbe, mögliche Folge-Stationen).
 
-```js
-{ id: 'cnc', name: 'CNC-Bearbeitung', machine: 'HOMAG CENTATEQ', color: '#8b5cf6' }
+---
+
+## Vorschau ohne Server
+
+`vorschau.html` ist eine eigenständige Datei (per Doppelklick im Browser, auch am
+Handy) zum Ausprobieren – Änderungen bleiben nur im jeweiligen Browser.
+Neu erzeugen mit:
+```bash
+node make-preview.js
 ```
 
 ---
 
 ## Technik (kurz)
 
-| Teil        | Umsetzung                                             |
-|-------------|-------------------------------------------------------|
-| Backend     | Node.js (Standardbibliothek, keine Pakete)            |
-| Persistenz  | `data.json` (für den Prototyp; später z.B. SQLite)    |
-| Live-Updates| Server-Sent Events (`/api/events`)                    |
-| Frontend    | Statisches HTML/CSS/JS in `public/` (kein Build)      |
-| API         | `GET /api/state`, `POST /api/orders`, `PUT /api/orders/:id`, `POST /api/orders/:id/move`, `DELETE /api/orders/:id` |
+| Teil         | Umsetzung                                                        |
+|--------------|------------------------------------------------------------------|
+| Backend      | Node.js 22 (Standardbibliothek, keine externen Pakete)           |
+| Datenbank    | eingebettetes **SQLite** (`node:sqlite`) + automatische Backups  |
+| Live-Updates | Server-Sent Events (`/api/events`)                               |
+| Frontend     | statisches HTML/CSS/JS in `public/` (kein Build)                 |
+| Betrieb      | Docker / Synology Container Manager (`docker-compose.yml`)       |
 
 ---
 
-## Nächste Ausbaustufen (Ideen)
+## Nächste mögliche Ausbaustufen
 
-1. **QR-/Barcode-Etiketten** auf den Auftragsmappen → am Tablet scannen, um den
-   Auftrag direkt zu öffnen und weiterzuschieben.
-2. **HOMAG Connect-API** anbinden (ab productionManager Advanced), damit die Maschinen
-   fertige Bauteile **automatisch zurückmelden** – kein manuelles Abhaken mehr.
-3. **Benutzer/Anmeldung** statt Name-im-Browser, inkl. Rollen (AV, Werkstatt, Montage).
-4. **Robuste Datenbank** (SQLite/Postgres) statt JSON-Datei, inkl. Backups.
-5. **Auswertungen**: Durchlaufzeiten je Station, Engpässe, Termintreue.
-6. **Import** der bestehenden Excel-Aufträge.
-
----
-
-## Hinweis zum Kontext
-
-Da ihr HOMAG-Maschinen einsetzt, lohnt sich parallel ein Blick auf den
-**HOMAG productionManager** (tapio) – er bietet die automatische Rückmeldung der
-Maschinen ab Werk. Dieser Prototyp ist die flexible Eigenbau-Alternative bzw. eine
-Ergänzung für Stationen/Prozesse, die HOMAG nicht abdeckt.
+1. **QR-/Barcode-Etiketten** auf den Auftragsmappen → scannen am Tablet.
+2. **Benutzer/Anmeldung & Rollen** (AV, Maschinist, Montage, Leitung).
+3. **HOMAG Connect-API** für automatische Maschinen-Rückmeldung.
+4. **Material-/Startbereit-Status** und Benachrichtigungen bei Überfälligkeit.
