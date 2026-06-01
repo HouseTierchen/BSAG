@@ -194,13 +194,17 @@ const server = http.createServer(async (req, res) => {
       const order = {
         id: crypto.randomUUID(),
         number: String(b.number),
+        pos: b.pos || '',
         customer: b.customer || '',
+        object: b.object || '',
         title: b.title,
+        effort: b.effort != null ? b.effort : null,
         stationId,
         priority: b.priority || 'normal',
         assignee: b.assignee || '',
         due: b.due || null,
         notes: b.notes || '',
+        flags: b.flags || {},
         createdAt: now,
         updatedAt: now,
         history: [{ at: now, stationId, by: b.by || 'Unbekannt', note: 'Auftrag angelegt' }],
@@ -237,7 +241,7 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'PUT') {
       const b = await readBody(req);
-      for (const f of ['number', 'customer', 'title', 'priority', 'assignee', 'due', 'notes']) {
+      for (const f of ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due', 'notes', 'flags']) {
         if (b[f] !== undefined) order[f] = b[f];
       }
       order.updatedAt = Date.now();

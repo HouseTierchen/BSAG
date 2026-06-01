@@ -125,14 +125,16 @@ function cardEl(o) {
 
   el.innerHTML = `
     <div class="row1">
-      <span class="number">${esc(o.number)}</span>
+      <span class="number">${esc(o.number)}${o.pos ? ` · Pos ${esc(o.pos)}` : ''}</span>
       ${o.assignee ? `<span class="tag">${esc(o.assignee)}</span>` : ''}
     </div>
     <div class="title">${esc(o.title)}</div>
-    <div class="customer">${esc(o.customer || '—')}</div>
+    <div class="customer">${esc(o.customer || '—')}${o.object ? ` · ${esc(o.object)}` : ''}</div>
     <div class="meta">
       <span class="tag">${prioLabel(o.priority)}</span>
       ${dueTag(o.due)}
+      ${o.effort ? `<span class="tag">⏱ ${esc(o.effort)}h</span>` : ''}
+      ${flagTags(o.flags)}
     </div>
     <div class="move">
       <button class="prev" ${prev ? '' : 'disabled'} title="Zurueck">◀ ${prev ? esc(prev.name) : ''}</button>
@@ -151,6 +153,21 @@ function cardEl(o) {
 
 function prioLabel(p) {
   return { hoch: '🔴 Hoch', normal: '🔵 Normal', tief: '⚪ Tief' }[p] || p;
+}
+
+// Status-Haekchen aus der Excel (KLM, scd, müh, huc, hem, teils) als kleine Marker.
+function flagTags(flags) {
+  if (!flags) return '';
+  return Object.entries(flags)
+    .filter(([k, v]) => v && k !== 'fertig')
+    .map(([k]) => `<span class="tag">✓ ${esc(k)}</span>`)
+    .join('');
+}
+
+function flagList(flags) {
+  if (!flags) return '—';
+  const on = Object.entries(flags).filter(([, v]) => v).map(([k]) => k);
+  return on.length ? esc(on.join(', ')) : '—';
 }
 
 function dueTag(due) {
@@ -207,11 +224,14 @@ function openEdit(o) {
   editingId = o.id;
   $('#dialogTitle').textContent = `Auftrag ${o.number}`;
   $('#f_number').value = o.number;
+  $('#f_pos').value = o.pos || '';
   $('#f_customer').value = o.customer || '';
+  $('#f_object').value = o.object || '';
   $('#f_title').value = o.title;
   $('#f_station').value = o.stationId;
   $('#f_priority').value = o.priority;
   $('#f_assignee').value = o.assignee || '';
+  $('#f_effort').value = o.effort != null ? o.effort : '';
   $('#f_due').value = o.due || '';
   $('#f_notes').value = o.notes || '';
   $('#deleteBtn').classList.remove('hidden');
@@ -222,11 +242,14 @@ $('#orderForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const payload = {
     number: $('#f_number').value.trim(),
+    pos: $('#f_pos').value.trim(),
     customer: $('#f_customer').value.trim(),
+    object: $('#f_object').value.trim(),
     title: $('#f_title').value.trim(),
     stationId: $('#f_station').value,
     priority: $('#f_priority').value,
     assignee: $('#f_assignee').value.trim(),
+    effort: $('#f_effort').value ? parseFloat($('#f_effort').value) : null,
     due: $('#f_due').value || null,
     notes: $('#f_notes').value.trim(),
     by: rememberName(),
@@ -283,13 +306,16 @@ function refreshDetail() {
 
   $('#detailContent').innerHTML = `
     <h2 class="detail-title">${esc(o.title)}</h2>
-    <div class="detail-sub">${esc(o.number)} · ${esc(o.customer || '—')}</div>
+    <div class="detail-sub">${esc(o.number)}${o.pos ? ` · Pos ${esc(o.pos)}` : ''} · ${esc(o.customer || '—')}</div>
     <dl class="detail-grid">
+      <dt>Objekt</dt><dd>${esc(o.object || '—')}</dd>
       <dt>Station</dt><dd>${esc(st ? `${st.name} (${st.machine})` : '?')}</dd>
       <dt>Prioritaet</dt><dd>${prioLabel(o.priority)}</dd>
-      <dt>Verantwortlich</dt><dd>${esc(o.assignee || '—')}</dd>
-      <dt>Liefertermin</dt><dd>${o.due ? formatDate(o.due) : '—'}</dd>
-      <dt>Notizen</dt><dd>${esc(o.notes || '—')}</dd>
+      <dt>Aufwand</dt><dd>${o.effort ? esc(o.effort) + ' h' : '—'}</dd>
+      <dt>Maschinist</dt><dd>${esc(o.assignee || '—')}</dd>
+      <dt>Termin Rampe</dt><dd>${o.due ? formatDate(o.due) : '—'}</dd>
+      <dt>Status</dt><dd>${flagList(o.flags)}</dd>
+      <dt>Bemerkung</dt><dd>${esc(o.notes || '—')}</dd>
     </dl>
     <div class="history">
       <h3>Verlauf</h3>

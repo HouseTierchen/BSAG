@@ -35,14 +35,22 @@
       <input type="hidden" id="orderId" />
       <div class="grid2">
         <label>Auftragsnummer
-          <input id="f_number" required placeholder="2026-050" />
+          <input id="f_number" required placeholder="2600931" />
         </label>
-        <label>Kunde
-          <input id="f_customer" placeholder="Familie Muster" />
+        <label>Pos-Nr.
+          <input id="f_pos" placeholder="30" />
         </label>
       </div>
-      <label>Bezeichnung
-        <input id="f_title" required placeholder="Kueche Eiche massiv" />
+      <div class="grid2">
+        <label>Kunde
+          <input id="f_customer" placeholder="Coop Musterstadt" />
+        </label>
+        <label>Objekt
+          <input id="f_object" placeholder="Filiale / Standort" />
+        </label>
+      </div>
+      <label>Bezeichnung / Beschrieb
+        <input id="f_title" required placeholder="Programmieren, Fraesen, Bohren" />
       </label>
       <div class="grid2">
         <label>Station
@@ -57,13 +65,16 @@
         </label>
       </div>
       <div class="grid2">
-        <label>Verantwortlich
+        <label>Maschinist
           <input id="f_assignee" placeholder="Name" />
         </label>
-        <label>Liefertermin
-          <input id="f_due" type="date" />
+        <label>Aufwand (h)
+          <input id="f_effort" type="number" step="0.5" min="0" placeholder="2" />
         </label>
       </div>
+      <label>Termin Rampe
+        <input id="f_due" type="date" />
+      </label>
       <label>Notizen
         <textarea id="f_notes" rows="2" placeholder="Material, Beschlaege, Besonderheiten…"></textarea>
       </label>
