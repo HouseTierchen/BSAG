@@ -535,4 +535,77 @@ function exportCsv() {
 }
 $('#exportBtn').addEventListener('click', exportCsv);
 
+/* ----------------------------------------------------------------------------
+ * Scanner – liest QR/Barcode der Auftragsmappe (BarcodeDetector) + manuelle Suche
+ * -------------------------------------------------------------------------- */
+const scanDialog = $('#scanDialog');
+let scanStream = null;
+let scanTimer = null;
+let barcodeDetector = null;
+
+// Auftrag anhand des gescannten Codes finden (ID, Nummer oder "Nummer-Pos").
+function findByCode(raw) {
+  const code = String(raw || '').trim();
+  if (!code) return null;
+  let o = orders.find((x) => x.id === code);
+  if (o) return o;
+  const m = code.match(/(\d{4,})(?:[-\s/]\s*(\d+))?/);
+  if (m) {
+    const num = m[1]; const pos = m[2];
+    o = orders.find((x) => String(x.number) === num && (pos == null || String(x.pos) === String(pos)));
+    if (o) return o;
+    o = orders.find((x) => String(x.number) === num);
+    if (o) return o;
+  }
+  return orders.find((x) => String(x.number).includes(code)) || null;
+}
+
+function handleScanResult(text) {
+  const o = findByCode(text);
+  if (o) { stopScan(); scanDialog.close(); openDetail(o.id); }
+  else { $('#scanHint').textContent = `Kein Auftrag zu „${text}" gefunden – bitte erneut versuchen.`; }
+}
+
+async function openScan() {
+  $('#scanInput').value = '';
+  scanDialog.showModal();
+  const video = $('#scanVideo');
+  const hint = $('#scanHint');
+  if (!('BarcodeDetector' in window)) {
+    hint.textContent = 'Kamera-Scan wird von diesem Browser nicht unterstützt. Bitte Nummer unten eingeben.';
+    video.style.display = 'none';
+    return;
+  }
+  try {
+    if (!barcodeDetector) {
+      const formats = await window.BarcodeDetector.getSupportedFormats();
+      const want = ['qr_code', 'code_128', 'ean_13', 'code_39', 'data_matrix'].filter((f) => formats.includes(f));
+      barcodeDetector = new window.BarcodeDetector({ formats: want.length ? want : formats });
+    }
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = scanStream; video.style.display = 'block'; await video.play();
+    hint.textContent = 'QR-/Barcode der Auftragsmappe in den Rahmen halten…';
+    scanTimer = setInterval(async () => {
+      try {
+        const codes = await barcodeDetector.detect(video);
+        if (codes && codes.length) handleScanResult(codes[0].rawValue);
+      } catch (e) { /* einzelne Frames ignorieren */ }
+    }, 400);
+  } catch (e) {
+    hint.textContent = `Kamera nicht verfügbar (${e.name || 'Fehler'}). Tipp: Kamera-Scan benötigt HTTPS. Bitte Nummer unten eingeben.`;
+    video.style.display = 'none';
+  }
+}
+
+function stopScan() {
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null; }
+}
+
+$('#scanBtn').addEventListener('click', openScan);
+$('#closeScan').addEventListener('click', () => { stopScan(); scanDialog.close(); });
+$('#scanLookup').addEventListener('click', () => handleScanResult($('#scanInput').value));
+$('#scanInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleScanResult($('#scanInput').value); });
+scanDialog.addEventListener('close', stopScan);
+
 init();
