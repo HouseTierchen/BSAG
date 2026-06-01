@@ -17,12 +17,12 @@ const path = require('path');
 const ROOT = __dirname;
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-// Daten laden (importierte data.json bevorzugt)
-let state;
-try {
-  state = JSON.parse(read('data.json'));
-} catch (e) {
-  console.error('Keine data.json gefunden – bitte zuerst import-csv.js ausfuehren.');
+// Daten aus der Datenbank laden
+const db = require('./db');
+db.open();
+const state = { stations: db.getStations(), orders: db.getOrders() };
+if (!state.orders.length) {
+  console.error('Datenbank leer – bitte zuerst "node import-csv.js <datei.csv>" ausfuehren oder den Server einmal starten.');
   process.exit(1);
 }
 

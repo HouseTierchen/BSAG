@@ -152,11 +152,39 @@ function main() {
     orders.push(o);
   }
 
-  const state = { stations: STATIONS, orders };
-  fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2));
-  console.log(`Import fertig: ${orders.length} Auftragspositionen -> ${DATA_FILE}`);
-  const fertig = orders.filter((o) => o.flags.fertig).length;
-  console.log(`  davon erledigt: ${fertig}, offen: ${orders.length - fertig}`);
+  // --- Abgleich in die Datenbank (parallel zur Excel) ---
+  // Beschreibende Felder kommen aus der Excel; der Werkstatt-Status
+  // (Station, Haekchen, Verlauf, Zeiten) bleibt in der App erhalten.
+  const db = require('./db');
+  db.open();
+  if (db.counts().stations === 0) db.setStations(STATIONS);
+
+  const byKey = new Map(db.getOrders().map((o) => [`${o.number}|${o.pos || ''}`, o]));
+  const now = Date.now();
+  let added = 0; let updated = 0;
+
+  for (const inc of orders) {
+    const cur = byKey.get(`${inc.number}|${inc.pos || ''}`);
+    if (cur) {
+      cur.customer = inc.customer;
+      cur.object = inc.object;
+      cur.title = inc.title;
+      cur.effort = inc.effort;
+      cur.due = inc.due;
+      if (!cur.assignee) cur.assignee = inc.assignee;
+      if (!cur.notes) cur.notes = inc.notes;
+      cur.requires512 = cur.requires512 || inc.requires512;
+      cur.updatedAt = now;
+      cur.history.push({ at: now, stationId: cur.stationId, by: 'Import', note: 'Abgleich aus Excel' });
+      db.upsertOrder(cur);
+      updated++;
+    } else {
+      db.upsertOrder(inc);
+      added++;
+    }
+  }
+  console.log(`Excel-Abgleich fertig: ${added} neu, ${updated} aktualisiert (Datenbank ${db.DB_FILE}).`);
+  console.log('Hinweis: bei laufendem Server diesen danach neu starten, damit der Abgleich sichtbar wird.');
 }
 
 main();

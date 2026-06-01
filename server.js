@@ -72,26 +72,36 @@ function isoIn(days) {
 }
 
 /* ----------------------------------------------------------------------------
- * Persistenz
+ * Persistenz (SQLite via db.js) – mit In-Memory-Spiegel fuer schnelle Lesezugriffe
  * -------------------------------------------------------------------------- */
+const db = require('./db');
+
 let state = loadState();
 
 function loadState() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!parsed.stations) parsed.stations = DEFAULT_STATIONS;
-    if (!parsed.orders) parsed.orders = [];
-    return parsed;
-  } catch (e) {
-    const fresh = { stations: DEFAULT_STATIONS, orders: seedOrders() };
-    saveState(fresh);
-    return fresh;
+  db.open();
+  // Erststart: Stationen anlegen (ggf. aus alter data.json uebernehmen)
+  const legacy = readLegacyJson();
+  if (db.counts().stations === 0) {
+    db.setStations(legacy && legacy.stations ? legacy.stations : DEFAULT_STATIONS);
   }
+  if (db.counts().orders === 0) {
+    const orders = legacy && legacy.orders ? legacy.orders : seedOrders();
+    orders.forEach((o) => db.upsertOrder(o));
+    if (legacy) console.log(`Migration: ${orders.length} Auftraege aus data.json uebernommen.`);
+  }
+  db.backup();                                   // Sicherung beim Start
+  setInterval(() => db.backup(), 6 * 60 * 60 * 1000); // alle 6h
+  return { stations: db.getStations(), orders: db.getOrders() };
 }
 
-function saveState(s = state) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(s, null, 2));
+function readLegacyJson() {
+  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch (e) { return null; }
+}
+
+// Einzelnen Auftrag dauerhaft sichern (write-through in die DB).
+function persist(order) {
+  db.upsertOrder(order);
 }
 
 /* ----------------------------------------------------------------------------
@@ -219,7 +229,7 @@ const server = http.createServer(async (req, res) => {
         history: [{ at: now, stationId, by: b.by || 'Unbekannt', note: 'Auftrag angelegt' }],
       };
       state.orders.push(order);
-      saveState();
+      persist(order);
       broadcast('order:created', order);
       return send(res, 201, order);
     } catch (e) {
@@ -242,7 +252,7 @@ const server = http.createServer(async (req, res) => {
     order.stationId = b.stationId;
     order.updatedAt = now;
     order.history.push({ at: now, stationId: b.stationId, by: b.by || 'Unbekannt', note: b.note || 'Station gewechselt' });
-    saveState();
+    persist(order);
     broadcast('order:updated', order);
     return send(res, 200, order);
   }
@@ -254,20 +264,20 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'PUT') {
       const b = await readBody(req);
-      for (const f of ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due', 'notes', 'flags']) {
+      for (const f of ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due', 'notes', 'flags', 'timeLogs']) {
         if (b[f] !== undefined) order[f] = b[f];
       }
       // Kontur-Erkennung nach Textaenderung neu bestimmen
       order.requires512 = requires512([order.title, order.object, order.notes].join(' '));
       order.updatedAt = Date.now();
-      saveState();
+      persist(order);
       broadcast('order:updated', order);
       return send(res, 200, order);
     }
 
     if (method === 'DELETE') {
       state.orders = state.orders.filter((o) => o.id !== order.id);
-      saveState();
+      db.deleteOrder(order.id);
       broadcast('order:deleted', { id: order.id });
       return send(res, 200, { ok: true });
     }

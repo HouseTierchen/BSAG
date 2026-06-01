@@ -1,0 +1,18 @@
+# Betrieb auf der Synology DS1522+ (Container Manager) oder per Docker.
+#   1) Projektordner auf die NAS kopieren
+#   2) im Container Manager ein "Projekt" aus dieser docker-compose.yml anlegen
+#   3) im Browser http://<NAS-IP>:3000 oeffnen
+#
+# Die Auftragsdaten liegen dauerhaft im Unterordner ./data (data.sqlite + backups).
+services:
+  bsag-leitstand:
+    build: .
+    container_name: bsag-leitstand
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+      - PORT=3000
+    restart: unless-stopped
