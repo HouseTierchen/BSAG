@@ -210,6 +210,7 @@ function cardEl(o) {
       ${dueTag(o.due)}
       ${o.effort ? `<span class="tag">⏱ ${esc(o.effort)}h</span>` : ''}
       ${o.requires512 ? '<span class="tag tag-512">🔒 nur 512 · Kontur</span>' : ''}
+      ${o.flags && o.flags.KLM ? '<span class="tag tag-kante">✂ Kantenleimen</span>' : ''}
       ${openLog(o) ? '<span class="tag tag-run">⏱ läuft</span>' : ''}
       ${flagTags(o.flags)}
     </div>
@@ -232,7 +233,7 @@ function prioLabel(p) {
 function flagTags(flags) {
   if (!flags) return '';
   return FLAG_META
-    .filter((f) => flags[f.key])
+    .filter((f) => flags[f.key] && f.key !== 'KLM') // KLM wird als eigener Marker gezeigt
     .map((f) => `<span class="tag flag-${f.type}" title="${esc(f.label)}">✓ ${esc(f.key)}</span>`)
     .join('');
 }
@@ -303,6 +304,7 @@ function openEdit(o) {
   $('#f_effort').value = o.effort != null ? o.effort : '';
   $('#f_due').value = o.due || '';
   $('#f_notes').value = o.notes || '';
+  $('#f_kante').checked = !!(o.flags && o.flags.KLM);
   $('#deleteBtn').classList.remove('hidden');
   dialog.showModal();
 }
@@ -321,6 +323,8 @@ $('#orderForm').addEventListener('submit', async (e) => {
     effort: $('#f_effort').value ? parseFloat($('#f_effort').value) : null,
     due: $('#f_due').value || null,
     notes: $('#f_notes').value.trim(),
+    // Kantenleimer-Arbeit (KLM) – bestehende Haekchen erhalten, KLM setzen/loeschen
+    flags: { ...((editingId && (orders.find((o) => o.id === editingId) || {}).flags) || {}), KLM: $('#f_kante').checked },
     by: rememberName(),
   };
   if (editingId) {

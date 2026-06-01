@@ -252,6 +252,12 @@ html, body {
 .tag.tag-512 { background: #ede9fe; border-color: #c4b5fd; color: #6d28d9; font-weight: 700; }
 /* laufende Zeiterfassung */
 .tag.tag-run { background: #dcfce7; border-color: #86efac; color: #15803d; font-weight: 700; }
+/* Kantenleimer-Arbeit erforderlich (KLM) */
+.tag.tag-kante { background: #ccfbf1; border-color: #5eead4; color: #0f766e; font-weight: 700; }
+
+/* Ankreuzfeld im Auftragsformular */
+.check-row { display: flex; flex-direction: row; align-items: center; gap: 12px; font-size: 17px; color: var(--text); cursor: pointer; margin-bottom: 12px; }
+.check-row input { width: 26px; height: 26px; margin: 0; accent-color: var(--accent); }
 
 /* ---------- Zeiterfassung ---------- */
 .time-box { border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 16px; }
