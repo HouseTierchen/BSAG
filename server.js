@@ -27,7 +27,6 @@ const DATA_FILE = path.join(ROOT, 'data.json');
  * "machine" verweist auf die konkrete Maschine (oder Handarbeitsplatz).
  * -------------------------------------------------------------------------- */
 const DEFAULT_STATIONS = [
-  { id: 'av',        name: 'Arbeitsvorbereitung', machine: 'Buero / AV',            color: '#64748b' },
   { id: 'zuschnitt', name: 'Zuschnitt',           machine: 'HOMAG SAWTEQ',          color: '#0ea5e9' },
   { id: 'kante',     name: 'Kantenanleimen',      machine: 'HOMAG EDGETEQ',         color: '#6366f1' },
   { id: 'cnc',       name: 'CNC-Bearbeitung',     machine: 'HOMAG CENTATEQ',        color: '#8b5cf6' },
@@ -62,7 +61,7 @@ function seedOrders() {
     mk({ number: '2026-039', customer: 'Architekt Huber', title: 'Empfangstheke Praxis',      stationId: 'kante',      priority: 'normal', assignee: 'Sandra', due: isoIn(5) }),
     mk({ number: '2026-044', customer: 'Restaurant Krone', title: '12x Tischplatten Nussbaum', stationId: 'zuschnitt', priority: 'normal', assignee: '',      due: isoIn(8) }),
     mk({ number: '2026-035', customer: 'Familie Bolliger', title: 'Garderobe Flur',           stationId: 'oberflaeche', priority: 'tief',  assignee: 'Marco', due: isoIn(1) }),
-    mk({ number: '2026-046', customer: 'Buero Lehmann',   title: 'Sideboard 3m',              stationId: 'av',         priority: 'normal', assignee: '',      due: isoIn(12) }),
+    mk({ number: '2026-046', customer: 'Buero Lehmann',   title: 'Sideboard 3m',              stationId: 'zuschnitt',  priority: 'normal', assignee: '',      due: isoIn(12) }),
     mk({ number: '2026-030', customer: 'Hotel Bahnhof',   title: 'Rezeption Umbau',           stationId: 'montage',    priority: 'hoch',   assignee: 'Reto',  due: isoIn(-1) }),
   ];
 }

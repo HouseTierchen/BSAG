@@ -21,7 +21,6 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 /* Stationen passend zum heutigen Ablauf (CNC-zentriert).
  * 511 / 512 = die beiden CNC-Maschinen, KLM = Kantenleimmaschine. */
 const STATIONS = [
-  { id: 'av',        name: 'Arbeitsvorbereitung', machine: 'Programmieren / AV', color: '#64748b' },
   { id: 'warte',     name: 'Warteschlange',       machine: 'bereit zur Bearbeitung', color: '#0ea5e9' },
   { id: 'cnc511',    name: 'CNC 511',             machine: 'HOMAG CNC 511',     color: '#6366f1' },
   { id: 'cnc512',    name: 'CNC 512',             machine: 'HOMAG CNC 512',     color: '#8b5cf6' },

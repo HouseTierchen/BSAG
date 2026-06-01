@@ -33,7 +33,7 @@ let html = read('public/index.html');
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview';
+const __KEY = 'bsag_preview_v2';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
