@@ -30,9 +30,10 @@ const DATA_FILE = path.join(ROOT, 'data.json');
  * danach weiter (Bankraum / sonstiges). "next" steuert die "Weiter"-Knoepfe. */
 const DEFAULT_STATIONS = [
   { id: 'warte',    name: 'Warteschlange', machine: 'bereit zur Bearbeitung',       color: '#0ea5e9', next: ['cnc511', 'cnc512'] },
-  { id: 'cnc511',   name: 'CNC 511',       machine: 'HOMAG CNC 511',                color: '#6366f1', next: ['bankraum'] },
-  { id: 'cnc512',   name: 'CNC 512',       machine: 'HOMAG CNC 512',                color: '#8b5cf6', next: ['bankraum'] },
-  { id: 'bankraum', name: 'Bankraum',      machine: 'Montage / Weiterverarbeitung', color: '#f59e0b', next: ['fertig'] },
+  { id: 'cnc511',   name: 'CNC 511',       machine: 'HOMAG CNC 511',                color: '#6366f1', next: ['kante', 'bankraum'] },
+  { id: 'cnc512',   name: 'CNC 512',       machine: 'HOMAG CNC 512',                color: '#8b5cf6', next: ['kante', 'bankraum'] },
+  { id: 'kante',    name: 'Kantenleimen',  machine: 'Kantenleimmaschine (KLM)',     color: '#0ea5a4', next: ['bankraum', 'fertig'] },
+  { id: 'bankraum', name: 'Bankraum',      machine: 'Montage / Weiterverarbeitung', color: '#f59e0b', next: ['kante', 'fertig'] },
   { id: 'fertig',   name: 'Fertig',        machine: 'erledigt',                     color: '#16a34a', next: [] },
 ];
 

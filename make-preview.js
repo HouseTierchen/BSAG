@@ -33,7 +33,7 @@ let html = read('public/index.html');
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview_v4';
+const __KEY = 'bsag_preview_v5';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
@@ -95,11 +95,11 @@ window.fetch = async (url, opts) => {
 /* Kleiner Hinweis-Balken + Zuruecksetzen-Knopf */
 window.addEventListener('DOMContentLoaded', () => {
   const bar = document.createElement('div');
-  bar.style.cssText = 'background:#422006;color:#fde68a;font-size:13px;padding:6px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px';
+  bar.style.cssText = 'background:#fef3c7;color:#92400e;font-size:14px;padding:8px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px';
   bar.innerHTML = '<span>Vorschau-Modus – Aenderungen werden nur in diesem Browser gespeichert (keine Live-Synchro zwischen Geraeten).</span>';
   const btn = document.createElement('button');
   btn.textContent = 'Vorschau zuruecksetzen';
-  btn.style.cssText = 'background:#7c2d12;border:1px solid #9a3412;color:#fed7aa;border-radius:6px;padding:5px 10px;cursor:pointer;white-space:nowrap';
+  btn.style.cssText = 'background:#fde68a;border:1px solid #f59e0b;color:#92400e;border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;font-weight:600';
   btn.onclick = () => { localStorage.removeItem(__KEY); location.reload(); };
   bar.appendChild(btn);
   document.body.insertBefore(bar, document.body.firstChild);
