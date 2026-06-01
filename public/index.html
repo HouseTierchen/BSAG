@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>BSAG Leitstand</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">BSAG</span>
+      <span class="subtitle">Auftrags-Leitstand</span>
+    </div>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Suchen: Auftrag, Kunde, Person…" autocomplete="off" />
+      <select id="priorityFilter" title="Nach Prioritaet filtern">
+        <option value="">Alle Prioritaeten</option>
+        <option value="hoch">Nur Hoch</option>
+        <option value="normal">Nur Normal</option>
+        <option value="tief">Nur Tief</option>
+      </select>
+      <span id="status" class="status" title="Live-Verbindung">●</span>
+      <button id="newOrderBtn" class="btn primary">+ Auftrag</button>
+    </div>
+  </header>
+
+  <main id="board" class="board" aria-live="polite"></main>
+
+  <!-- Auftrag anlegen / bearbeiten -->
+  <dialog id="orderDialog" class="dialog">
+    <form id="orderForm" method="dialog">
+      <h2 id="dialogTitle">Neuer Auftrag</h2>
+      <input type="hidden" id="orderId" />
+      <div class="grid2">
+        <label>Auftragsnummer
+          <input id="f_number" required placeholder="2026-050" />
+        </label>
+        <label>Kunde
+          <input id="f_customer" placeholder="Familie Muster" />
+        </label>
+      </div>
+      <label>Bezeichnung
+        <input id="f_title" required placeholder="Kueche Eiche massiv" />
+      </label>
+      <div class="grid2">
+        <label>Station
+          <select id="f_station"></select>
+        </label>
+        <label>Prioritaet
+          <select id="f_priority">
+            <option value="hoch">Hoch</option>
+            <option value="normal" selected>Normal</option>
+            <option value="tief">Tief</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid2">
+        <label>Verantwortlich
+          <input id="f_assignee" placeholder="Name" />
+        </label>
+        <label>Liefertermin
+          <input id="f_due" type="date" />
+        </label>
+      </div>
+      <label>Notizen
+        <textarea id="f_notes" rows="2" placeholder="Material, Beschlaege, Besonderheiten…"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="deleteBtn" class="btn danger hidden">Loeschen</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancelBtn" class="btn">Abbrechen</button>
+        <button type="submit" class="btn primary">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Detail / Verlauf -->
+  <dialog id="detailDialog" class="dialog">
+    <div id="detailContent"></div>
+    <div class="dialog-actions">
+      <button type="button" id="editFromDetail" class="btn">Bearbeiten</button>
+      <span class="spacer"></span>
+      <button type="button" id="closeDetail" class="btn primary">Schliessen</button>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

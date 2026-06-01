@@ -1,0 +1,13 @@
+{
+  "name": "bsag-leitstand",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Digitaler Auftrags-/Maschinen-Leitstand fuer die Schreinerei (Prototyp)",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
