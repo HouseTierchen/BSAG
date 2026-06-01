@@ -130,9 +130,26 @@ node make-preview.js
 
 ---
 
+## HOMAG-Anbindung (vorbereitet)
+
+Eingebauter, token-geschützter Endpunkt, an den HOMAG-Maschinen bzw. der
+productionManager fertige Teile melden können – der Auftrag rückt dann von selbst
+weiter:
+
+```
+POST /api/homag/feedback
+Header: x-homag-token: <TOKEN>
+Body:   { "orderNumber": "2600931", "pos": "30", "event": "completed", "machine": "CNC 512" }
+```
+- `event: "completed"` → eine Station weiter; `"finished"` → auf „Fertig".
+- Aktiv nur, wenn `HOMAG_WEBHOOK_TOKEN` gesetzt ist (sonst 503).
+- Die produktive **Connect-API** (Aufträge/Status von tapio abrufen) braucht
+  zusätzlich `HOMAG_CLIENT_ID`/`HOMAG_CLIENT_SECRET` aus eurem tapio-Konto und
+  productionManager *Advanced* – Platzhalter in `homag.js`.
+
 ## Nächste mögliche Ausbaustufen
 
-1. **QR-/Barcode-Etiketten** auf den Auftragsmappen → scannen am Tablet.
-2. **Benutzer/Anmeldung & Rollen** (AV, Maschinist, Montage, Leitung).
-3. **HOMAG Connect-API** für automatische Maschinen-Rückmeldung.
-4. **Material-/Startbereit-Status** und Benachrichtigungen bei Überfälligkeit.
+1. **Material-/Startbereit-Status** und Benachrichtigungen bei Überfälligkeit.
+2. **Reihenfolge je Maschine** manuell planen (Drag-Sortierung).
+3. **Produktive HOMAG Connect-API** anbinden (sobald tapio-Zugang vorliegt).
+4. **Anhänge** (Werkstattzeichnung/PDF, CNC-Programm) je Auftrag.

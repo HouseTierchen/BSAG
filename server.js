@@ -75,6 +75,7 @@ function isoIn(days) {
  * Persistenz (SQLite via db.js) – mit In-Memory-Spiegel fuer schnelle Lesezugriffe
  * -------------------------------------------------------------------------- */
 const db = require('./db');
+const homag = require('./homag');
 
 let state = loadState();
 
@@ -243,6 +244,38 @@ const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const method = req.method;
   const me = userFromReq(req);
+
+  // --- HOMAG-Rueckmeldung (Maschine -> Board), token-geschuetzt ---
+  if (url === '/api/homag/feedback' && method === 'POST') {
+    if (!homag.enabled()) return send(res, 503, { error: 'HOMAG-Anbindung nicht konfiguriert (HOMAG_WEBHOOK_TOKEN fehlt)' });
+    if (!homag.authorized(req)) return send(res, 401, { error: 'ungueltiges HOMAG-Token' });
+    const b = await readBody(req);
+    const now = () => Date.now();
+    const r = homag.applyFeedback(b, {
+      findByNumberPos: (num, pos) => state.orders.find((o) => String(o.number) === num && (pos == null || String(o.pos) === pos)),
+      advance: (order, machine) => {
+        const st = state.stations.find((s) => s.id === order.stationId);
+        const nxt = st && st.next && st.next[0];
+        if (nxt) order.stationId = nxt;
+        order.updatedAt = now();
+        order.history.push({ at: order.updatedAt, stationId: order.stationId, by: `HOMAG ${machine}`, note: 'Automatische Rueckmeldung: Bearbeitung fertig' });
+        persist(order); broadcast('order:updated', order);
+      },
+      finish: (order, machine) => {
+        order.flags = { ...(order.flags || {}), fertig: true };
+        order.stationId = 'fertig';
+        order.updatedAt = now();
+        order.history.push({ at: order.updatedAt, stationId: 'fertig', by: `HOMAG ${machine}`, note: 'Automatische Rueckmeldung: fertig' });
+        persist(order); broadcast('order:updated', order);
+      },
+      note: (order, machine, text) => {
+        order.updatedAt = now();
+        order.history.push({ at: order.updatedAt, stationId: order.stationId, by: `HOMAG ${machine}`, note: text });
+        persist(order); broadcast('order:updated', order);
+      },
+    });
+    return send(res, r.ok ? 200 : (r.status || 400), r.ok ? { ok: true, order: r.order } : { error: r.message });
+  }
 
   // --- Anmeldung (ohne Passwort: Benutzer auswaehlen) ---
   if (url === '/api/users' && method === 'GET') {

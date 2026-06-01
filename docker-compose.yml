@@ -15,4 +15,10 @@ services:
     environment:
       - DATA_DIR=/data
       - PORT=3000
+      # HOMAG-Rueckmeldung aktivieren (optional): Token setzen und an HOMAG/
+      # productionManager weitergeben. Endpunkt: POST /api/homag/feedback
+      # - HOMAG_WEBHOOK_TOKEN=bitte-geheimes-token-setzen
+      # Produktive Connect-API (optional, benoetigt tapio-Zugang):
+      # - HOMAG_CLIENT_ID=...
+      # - HOMAG_CLIENT_SECRET=...
     restart: unless-stopped
