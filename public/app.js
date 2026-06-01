@@ -9,6 +9,21 @@ let stations = [];
 let orders = [];
 let editingId = null;
 
+/*
+ * Bedeutung der Haekchen-Spalten aus der Excel.
+ * type: 'prozess' = Maschine/Arbeitsschritt, 'person' = Mitarbeiter, 'status' = Zustand.
+ * Namen hier ergaenzen, sobald bekannt (z.B. müh/huc/hem).
+ */
+const FLAG_META = [
+  { key: 'KLM',   label: 'Kantenleimen',   type: 'prozess' },
+  { key: 'scd',   label: 'Schmid Daniel',       type: 'person' },
+  { key: 'müh',   label: 'Mühlethalter Herbert', type: 'person' },
+  { key: 'huc',   label: 'Hunn Celin',          type: 'person' },
+  { key: 'hem',   label: 'Heuberger Markus',    type: 'person' },
+  { key: 'teils', label: 'teilweise',      type: 'status' },
+];
+const flagLabel = (k) => (FLAG_META.find((f) => f.key === k) || {}).label || k;
+
 const $ = (sel) => document.querySelector(sel);
 const board = $('#board');
 const statusEl = $('#status');
@@ -155,19 +170,13 @@ function prioLabel(p) {
   return { hoch: '🔴 Hoch', normal: '🔵 Normal', tief: '⚪ Tief' }[p] || p;
 }
 
-// Status-Haekchen aus der Excel (KLM, scd, müh, huc, hem, teils) als kleine Marker.
+// Aktive Haekchen (KLM, Beteiligte, teilweise) kompakt als Marker auf der Karte.
 function flagTags(flags) {
   if (!flags) return '';
-  return Object.entries(flags)
-    .filter(([k, v]) => v && k !== 'fertig')
-    .map(([k]) => `<span class="tag">✓ ${esc(k)}</span>`)
+  return FLAG_META
+    .filter((f) => flags[f.key])
+    .map((f) => `<span class="tag flag-${f.type}" title="${esc(f.label)}">✓ ${esc(f.key)}</span>`)
     .join('');
-}
-
-function flagList(flags) {
-  if (!flags) return '—';
-  const on = Object.entries(flags).filter(([, v]) => v).map(([k]) => k);
-  return on.length ? esc(on.join(', ')) : '—';
 }
 
 function dueTag(due) {
@@ -314,13 +323,36 @@ function refreshDetail() {
       <dt>Aufwand</dt><dd>${o.effort ? esc(o.effort) + ' h' : '—'}</dd>
       <dt>Maschinist</dt><dd>${esc(o.assignee || '—')}</dd>
       <dt>Termin Rampe</dt><dd>${o.due ? formatDate(o.due) : '—'}</dd>
-      <dt>Status</dt><dd>${flagList(o.flags)}</dd>
       <dt>Bemerkung</dt><dd>${esc(o.notes || '—')}</dd>
     </dl>
+    <div class="flags-edit">
+      <h3>Maschine · Beteiligte · Status <span class="hint">(antippen zum Abhaken)</span></h3>
+      <div class="flag-toggles">
+        ${FLAG_META.map((f) => `
+          <label class="flag-toggle flag-${f.type}">
+            <input type="checkbox" data-flag="${esc(f.key)}" ${o.flags && o.flags[f.key] ? 'checked' : ''} />
+            <span>${esc(f.label)}</span>
+          </label>`).join('')}
+      </div>
+    </div>
     <div class="history">
       <h3>Verlauf</h3>
       <ul>${history}</ul>
     </div>`;
+
+  // Haekchen anklickbar machen -> speichert sofort fuer alle Geraete
+  $('#detailContent').querySelectorAll('input[data-flag]').forEach((cb) => {
+    cb.addEventListener('change', () => toggleFlag(o, cb.dataset.flag, cb.checked));
+  });
+}
+
+async function toggleFlag(order, key, value) {
+  const flags = { ...(order.flags || {}), [key]: value };
+  await fetch(`/api/orders/${order.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ flags, by: rememberName() }),
+  });
 }
 
 $('#closeDetail').addEventListener('click', () => { detailDialog.close(); detailId = null; });

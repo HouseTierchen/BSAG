@@ -206,6 +206,29 @@ html, body {
 .history li { font-size: 13px; display: flex; gap: 10px; }
 .history .when { color: var(--muted); flex: 0 0 130px; }
 
+/* ---------- Haekchen (Maschine / Beteiligte / Status) ---------- */
+.flags-edit { border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 16px; }
+.flags-edit h3 { font-size: 14px; margin: 0 0 10px; }
+.flags-edit .hint { color: var(--muted); font-weight: 400; font-size: 12px; }
+.flag-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.flag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.flag-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.flag-toggle:has(input:checked) { border-color: var(--accent); background: #0b2535; }
+/* Farbkodierung der Marker auf den Karten */
+.tag.flag-prozess { border-color: #ec4899; color: #f9a8d4; }
+.tag.flag-person  { border-color: #6366f1; color: #a5b4fc; }
+.tag.flag-status  { border-color: #f59e0b; color: #fde68a; }
+
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
   .toolbar input[type="search"] { min-width: 140px; flex: 1; }
