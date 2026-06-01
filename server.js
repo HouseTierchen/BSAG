@@ -247,7 +247,7 @@ const server = http.createServer(async (req, res) => {
 
   // --- HOMAG-Rueckmeldung (Maschine -> Board), token-geschuetzt ---
   if (url === '/api/homag/feedback' && method === 'POST') {
-    if (!homag.enabled()) return send(res, 503, { error: 'HOMAG-Anbindung nicht konfiguriert (HOMAG_WEBHOOK_TOKEN fehlt)' });
+    if (!homag.enabled()) return send(res, 503, { error: 'HOMAG-Anbindung ist deaktiviert (HOMAG_ENABLED + HOMAG_WEBHOOK_TOKEN setzen)' });
     if (!homag.authorized(req)) return send(res, 401, { error: 'ungueltiges HOMAG-Token' });
     const b = await readBody(req);
     const now = () => Date.now();

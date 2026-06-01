@@ -13,8 +13,10 @@
  *             "event": "completed" | "finished",
  *             "machine": "CNC 512" }
  *
- * Aktiv nur, wenn die Umgebungsvariable HOMAG_WEBHOOK_TOKEN gesetzt ist
- * (sonst antwortet der Endpunkt mit 503 "nicht konfiguriert").
+ * OPTIONAL – standardmaessig AUS. Aktiv nur, wenn BEIDES gesetzt ist:
+ *   HOMAG_ENABLED=true   und   HOMAG_WEBHOOK_TOKEN=<geheim>
+ * Andernfalls antwortet der Endpunkt mit 503 "nicht konfiguriert" und die
+ * App laeuft ganz normal ohne HOMAG weiter.
  *
  * Der AUSGEHENDE Weg (produktive Connect-API von tapio: Auftraege/Status
  * abfragen, Teile melden) benoetigt zusaetzlich Client-ID/Secret aus eurem
@@ -24,7 +26,12 @@
 
 const TOKEN = process.env.HOMAG_WEBHOOK_TOKEN || '';
 
-function enabled() { return !!TOKEN; }
+// Bewusster Ein-Schalter: nur aktiv, wenn ausdruecklich eingeschaltet UND ein
+// Token hinterlegt ist. Ohne diese Variablen ist die Anbindung komplett aus.
+function enabled() {
+  const flag = String(process.env.HOMAG_ENABLED || '').toLowerCase();
+  return (flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on') && !!TOKEN;
+}
 
 function authorized(req) {
   return !!TOKEN && req.headers['x-homag-token'] === TOKEN;

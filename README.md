@@ -130,11 +130,12 @@ node make-preview.js
 
 ---
 
-## HOMAG-Anbindung (vorbereitet)
+## HOMAG-Anbindung (optional, standardmäßig aus)
 
-Eingebauter, token-geschützter Endpunkt, an den HOMAG-Maschinen bzw. der
-productionManager fertige Teile melden können – der Auftrag rückt dann von selbst
-weiter:
+Die HOMAG-Anbindung ist **komplett optional** und **standardmäßig deaktiviert** –
+die App läuft ohne sie ganz normal. Eingebaut ist ein token-geschützter Endpunkt,
+an den HOMAG-Maschinen bzw. der productionManager fertige Teile melden können,
+sodass der Auftrag von selbst weiterrückt:
 
 ```
 POST /api/homag/feedback
@@ -142,7 +143,8 @@ Header: x-homag-token: <TOKEN>
 Body:   { "orderNumber": "2600931", "pos": "30", "event": "completed", "machine": "CNC 512" }
 ```
 - `event: "completed"` → eine Station weiter; `"finished"` → auf „Fertig".
-- Aktiv nur, wenn `HOMAG_WEBHOOK_TOKEN` gesetzt ist (sonst 503).
+- **Einschalten** durch Setzen von **beidem**: `HOMAG_ENABLED=true` **und**
+  `HOMAG_WEBHOOK_TOKEN=<geheim>`. Fehlt eines, ist die Anbindung aus (503).
 - Die produktive **Connect-API** (Aufträge/Status von tapio abrufen) braucht
   zusätzlich `HOMAG_CLIENT_ID`/`HOMAG_CLIENT_SECRET` aus eurem tapio-Konto und
   productionManager *Advanced* – Platzhalter in `homag.js`.
