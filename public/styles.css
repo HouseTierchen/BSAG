@@ -241,6 +241,8 @@ html, body {
 .tag.flag-prozess { border-color: #ec4899; color: #f9a8d4; }
 .tag.flag-person  { border-color: #6366f1; color: #a5b4fc; }
 .tag.flag-status  { border-color: #f59e0b; color: #fde68a; }
+/* Kontur -> nur CNC 512 */
+.tag.tag-512 { background: #2e1065; border-color: #8b5cf6; color: #ddd6fe; font-weight: 700; }
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {

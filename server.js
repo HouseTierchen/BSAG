@@ -157,6 +157,11 @@ function findOrder(id) {
   return state.orders.find((o) => o.id === id);
 }
 
+// Routing-Regel: "Kontur"/"Konturkante" -> Auftrag muss auf CNC 512.
+function requires512(text) {
+  return /kontur/i.test(text || '');
+}
+
 /* ----------------------------------------------------------------------------
  * Server / Routing
  * -------------------------------------------------------------------------- */
@@ -189,7 +194,11 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       if (!b.title || !b.number) return send(res, 400, { error: 'Nummer und Titel sind erforderlich' });
       const now = Date.now();
-      const stationId = b.stationId && state.stations.some((s) => s.id === b.stationId) ? b.stationId : state.stations[0].id;
+      const req512 = requires512([b.title, b.object, b.notes].join(' '));
+      let stationId;
+      if (b.stationId && state.stations.some((s) => s.id === b.stationId)) stationId = b.stationId;
+      else if (req512 && state.stations.some((s) => s.id === 'cnc512')) stationId = 'cnc512';
+      else stationId = state.stations[0].id;
       const order = {
         id: crypto.randomUUID(),
         number: String(b.number),
@@ -199,6 +208,7 @@ const server = http.createServer(async (req, res) => {
         title: b.title,
         effort: b.effort != null ? b.effort : null,
         stationId,
+        requires512: req512,
         priority: b.priority || 'normal',
         assignee: b.assignee || '',
         due: b.due || null,
@@ -224,6 +234,10 @@ const server = http.createServer(async (req, res) => {
     if (!order) return send(res, 404, { error: 'Auftrag nicht gefunden' });
     const b = await readBody(req);
     if (!state.stations.some((s) => s.id === b.stationId)) return send(res, 400, { error: 'Unbekannte Station' });
+    // Kontur-Auftraege duerfen nicht auf CNC 511.
+    if (order.requires512 && b.stationId === 'cnc511') {
+      return send(res, 409, { error: 'Kontur-Auftrag: nur auf CNC 512 moeglich.' });
+    }
     const now = Date.now();
     order.stationId = b.stationId;
     order.updatedAt = now;
@@ -243,6 +257,8 @@ const server = http.createServer(async (req, res) => {
       for (const f of ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due', 'notes', 'flags']) {
         if (b[f] !== undefined) order[f] = b[f];
       }
+      // Kontur-Erkennung nach Textaenderung neu bestimmen
+      order.requires512 = requires512([order.title, order.object, order.notes].join(' '));
       order.updatedAt = Date.now();
       saveState();
       broadcast('order:updated', order);

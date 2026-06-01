@@ -124,6 +124,8 @@ function main() {
 
     const due = parseDate(get(C.termin));
     const now = Date.now();
+    // Routing-Regel: "Kontur"/"Konturkante" -> nur CNC 512, sonst beide moeglich.
+    const req512 = /kontur/i.test([beschrieb, get(C.objekt), get(C.bemerkung)].join(' '));
     const o = {
       id: crypto.randomUUID(),
       number: auftrag || '—',
@@ -132,7 +134,8 @@ function main() {
       object: get(C.objekt),
       title: beschrieb,
       effort: parseFloat(get(C.aufwand)) || null,
-      stationId: flags.fertig ? 'fertig' : 'warte',
+      stationId: flags.fertig ? 'fertig' : (req512 ? 'cnc512' : 'warte'),
+      requires512: req512,
       assignee: get(C.maschinist),
       due,
       notes: get(C.bemerkung),
@@ -140,7 +143,7 @@ function main() {
       priority: 'normal',
       createdAt: now,
       updatedAt: now,
-      history: [{ at: now, stationId: flags.fertig ? 'fertig' : 'warte', by: 'Import', note: 'Aus Excel importiert' }],
+      history: [{ at: now, stationId: flags.fertig ? 'fertig' : (req512 ? 'cnc512' : 'warte'), by: 'Import', note: req512 ? 'Importiert – Kontur erkannt, CNC 512' : 'Aus Excel importiert' }],
     };
     o.priority = priorityFor(o);
     orders.push(o);

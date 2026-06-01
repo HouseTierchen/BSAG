@@ -149,6 +149,7 @@ function cardEl(o) {
       <span class="tag">${prioLabel(o.priority)}</span>
       ${dueTag(o.due)}
       ${o.effort ? `<span class="tag">⏱ ${esc(o.effort)}h</span>` : ''}
+      ${o.requires512 ? '<span class="tag tag-512">🔒 nur 512 · Kontur</span>' : ''}
       ${flagTags(o.flags)}
     </div>
     <div class="move">
@@ -193,6 +194,12 @@ function dueTag(due) {
  * Aktionen
  * -------------------------------------------------------------------------- */
 async function moveOrder(id, stationId) {
+  const o = orders.find((x) => x.id === id);
+  // Kontur-Auftraege duerfen nicht auf CNC 511.
+  if (o && o.requires512 && stationId === 'cnc511') {
+    alert('Dieser Auftrag enthält "Kontur" und kann nur auf der CNC 512 gefertigt werden.');
+    return;
+  }
   const by = rememberName();
   await fetch(`/api/orders/${id}/move`, {
     method: 'POST',
@@ -321,6 +328,7 @@ function refreshDetail() {
       <dt>Station</dt><dd>${esc(st ? `${st.name} (${st.machine})` : '?')}</dd>
       <dt>Prioritaet</dt><dd>${prioLabel(o.priority)}</dd>
       <dt>Aufwand</dt><dd>${o.effort ? esc(o.effort) + ' h' : '—'}</dd>
+      <dt>Maschine</dt><dd>${o.requires512 ? '🔒 nur CNC 512 (Kontur)' : 'CNC 511 oder 512'}</dd>
       <dt>Maschinist</dt><dd>${esc(o.assignee || '—')}</dd>
       <dt>Termin Rampe</dt><dd>${o.due ? formatDate(o.due) : '—'}</dd>
       <dt>Bemerkung</dt><dd>${esc(o.notes || '—')}</dd>
