@@ -1,4 +1,6 @@
 node_modules/
 data.json
+vorschau.html
+*.csv
 *.log
 .DS_Store
