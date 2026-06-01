@@ -27,6 +27,7 @@
       <button id="scanBtn" class="btn" title="Auftragsmappe scannen">📷 Scan</button>
       <button id="kpiBtn" class="btn" title="Auswertung / Kennzahlen">📊 Auswertung</button>
       <button id="exportBtn" class="btn" title="Als CSV fuer Excel exportieren">⬇ Export</button>
+      <button id="rapportBtn" class="btn" title="Tagesrapport (A5) drucken">🖨 Rapport</button>
       <button id="newOrderBtn" class="btn primary">+ Auftrag</button>
     </div>
   </header>
@@ -135,6 +136,29 @@
     </div>
   </dialog>
 
+  <!-- Tagesrapport (A5 quer, Netzwerkdrucker) -->
+  <dialog id="rapportDialog" class="dialog rapport-dialog">
+    <h2>Tagesrapport</h2>
+    <div class="grid2">
+      <label>Mitarbeiter
+        <select id="rapPerson"></select>
+      </label>
+      <label>Datum
+        <input id="rapDate" type="date" />
+      </label>
+    </div>
+    <div id="rapportPreview" class="rapport-preview"></div>
+    <div class="dialog-actions">
+      <button type="button" id="rapPrint" class="btn primary">🖨 Drucken</button>
+      <span class="spacer"></span>
+      <button type="button" id="rapClose" class="btn">Schliessen</button>
+    </div>
+  </dialog>
+
+  <!-- Druckbereich (nur beim Drucken sichtbar) -->
+  <div id="rapportPrint"></div>
+
+  <script src="/rapport-logo.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

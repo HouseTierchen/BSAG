@@ -267,6 +267,50 @@ html, body {
 .login-user .lu-role { font-size: 13px; color: var(--muted); }
 @media (max-width: 640px) { .login-users { grid-template-columns: 1fr; } }
 
+/* ---------- Tagesrapport (A5 quer) ---------- */
+.rapport-dialog { width: min(940px, 97vw); }
+.rapport-preview { background: #e9edf2; padding: 14px; border-radius: 10px; overflow: auto; margin-bottom: 6px; }
+#rapportPrint { display: none; }
+
+.rap-sheet {
+  background: #fff; color: #000; width: 247mm; max-width: 100%; margin: 0 auto;
+  padding: 6mm; box-sizing: border-box; font-family: Arial, system-ui, sans-serif;
+  font-size: 9pt; line-height: 1.15;
+}
+.rap-head { display: flex; align-items: center; gap: 12px; border-bottom: 1.5px solid #000; padding-bottom: 4px; }
+.rap-logo { height: 16mm; width: auto; }
+.rap-logo-text { font-weight: 800; font-size: 14pt; }
+.rap-title { flex: 1; text-align: center; font-size: 18pt; font-weight: 700; letter-spacing: 1px; }
+.rap-page { font-size: 8pt; color: #333; }
+.rap-meta { display: flex; gap: 0; margin: 6px 0; border: 1px solid #000; }
+.rap-meta > div { flex: 1; padding: 3px 6px; border-right: 1px solid #000; display: flex; flex-direction: column; }
+.rap-meta > div:last-child { border-right: 0; }
+.rap-meta span { font-size: 7.5pt; color: #333; }
+.rap-meta b { font-size: 11pt; min-height: 14px; }
+
+.rap-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rap-table th, .rap-table td { border: 0.75px solid #000; padding: 2px 3px; font-size: 8pt; text-align: center; vertical-align: middle; overflow: hidden; }
+.rap-table th { background: #e5e5e5; font-weight: 700; font-size: 7.5pt; }
+.rap-table .k { width: 26%; text-align: left; }
+.rap-table td.k { white-space: nowrap; text-overflow: ellipsis; }
+.rap-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.rap-table tbody td { height: 7mm; }
+.rap-table .rap-pause td { height: 8mm; }
+.rap-table .rap-pause .k { text-align: left; font-style: italic; }
+.rap-table .rap-pause .lbl { font-weight: 700; }
+.rap-table .rap-pause .tot { font-weight: 800; font-size: 10pt; }
+.rap-sign { display: flex; gap: 18px; margin-top: 8px; }
+.rap-sign > div { flex: 1; }
+.rap-sign span { display: inline-block; border-bottom: 1px solid #000; min-width: 60%; height: 14px; vertical-align: bottom; }
+
+@media print {
+  @page { size: A5 landscape; margin: 6mm; }
+  body { background: #fff; }
+  body > *:not(#rapportPrint) { display: none !important; }
+  #rapportPrint { display: block !important; }
+  .rap-sheet { width: 100%; padding: 0; font-size: 8.5pt; }
+}
+
 /* ---------- Scanner ---------- */
 #scanVideo { width: 100%; max-height: 50vh; background: #0b1220; border-radius: 12px; object-fit: cover; }
 .scan-hint { color: var(--muted); font-size: 15px; margin: 10px 0 14px; }

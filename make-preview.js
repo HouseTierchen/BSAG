@@ -28,12 +28,13 @@ if (!state.orders.length) {
 
 const css = read('public/styles.css');
 const appjs = read('public/app.js');
+const logojs = read('public/rapport-logo.js');
 let html = read('public/index.html');
 
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview_v9';
+const __KEY = 'bsag_preview_v10';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
@@ -114,6 +115,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 html = html
   .replace('<link rel="stylesheet" href="/styles.css" />', `<style>\n${css}\n</style>`)
+  .replace('<script src="/rapport-logo.js"></script>', `<script>\n${logojs}\n</script>`)
   .replace('<script src="/app.js"></script>', `<script>\n${shim}\n</script>\n<script>\n${appjs}\n</script>`);
 
 fs.writeFileSync(path.join(ROOT, 'vorschau.html'), html);

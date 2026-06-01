@@ -24,6 +24,8 @@ alle Geräte sehen dieselben Daten **in Echtzeit**.
 - **Auswertung / KPIs:** Termintreue, Ø Durchlaufzeit, Stunden Ist/Soll,
   offene Last je Station.
 - **CSV-Export** für den Abgleich zurück in die Excel.
+- **Tagesrapport (A5 quer)** nach Vorlage Bolliger Söhne AG: druckt pro Mitarbeiter
+  und Tag die erfassten Stunden je Auftrag – direkt auf den Netzwerkdrucker.
 - **Live-Sync** über alle Geräte, **Verlauf** je Auftrag, **Termin-Warnungen**,
   Suche/Filter, grosse fingerfreundliche Kacheln, helles Design.
 - **SQLite-Datenbank** mit **automatischem Backup** (kein externes Paket nötig).

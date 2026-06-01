@@ -653,4 +653,102 @@ $('#scanLookup').addEventListener('click', () => handleScanResult($('#scanInput'
 $('#scanInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleScanResult($('#scanInput').value); });
 scanDialog.addEventListener('close', stopScan);
 
+/* ----------------------------------------------------------------------------
+ * Tagesrapport (A5 quer) – nach Vorlage Bolliger Söhne AG, zum Drucken
+ * -------------------------------------------------------------------------- */
+const rapportDialog = $('#rapportDialog');
+const LOGO = window.RAPPORT_LOGO || '';
+
+function localDate(ts) { return new Date(ts).toLocaleDateString('en-CA'); } // YYYY-MM-DD lokal
+function h2(n) { return n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+// Alle erfassten Personen (aus den Zeitlogs) + angemeldeter Benutzer.
+function rapportPersons() {
+  const set = new Set();
+  orders.forEach((o) => (o.timeLogs || []).forEach((l) => l.by && set.add(l.by)));
+  if (me && me.name) set.add(me.name);
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+// Stunden je Auftrag fuer Person + Tag (aus den Zeitlogs).
+function rapportData(person, dateStr) {
+  const map = new Map();
+  for (const o of orders) {
+    for (const l of (o.timeLogs || [])) {
+      if (l.by !== person || localDate(l.startedAt) !== dateStr) continue;
+      const secs = l.endedAt ? (l.seconds || 0) : Math.max(0, Math.round((Date.now() - l.startedAt) / 1000));
+      map.set(o.id, (map.get(o.id) || 0) + secs);
+    }
+  }
+  return [...map.entries()].map(([id, secs]) => ({ o: orders.find((x) => x.id === id), hours: secs / 3600 }))
+    .filter((r) => r.o);
+}
+
+function buildRapportHtml(person, dateStr) {
+  const lines = rapportData(person, dateStr);
+  const total = lines.reduce((s, r) => s + r.hours, 0);
+  const MIN_ROWS = 9;
+  const rows = [];
+  for (const r of lines) {
+    const o = r.o;
+    const kunde = `${esc(o.customer || '')}${o.title ? ' / ' + esc(o.title) : ''}${o.object ? ' · ' + esc(o.object) : ''}`;
+    rows.push(`<tr><td class="k">${kunde}</td><td>${esc(o.number || '')}</td><td>${esc(o.pos || '')}</td><td></td><td class="num">${h2(r.hours)}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
+  }
+  while (rows.length < MIN_ROWS) rows.push('<tr><td class="k">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>');
+
+  return `
+  <div class="rap-sheet">
+    <div class="rap-head">
+      ${LOGO ? `<img class="rap-logo" src="${LOGO}" alt="Bolliger Söhne AG">` : '<div class="rap-logo-text">Bolliger Söhne AG</div>'}
+      <div class="rap-title">Tagesrapport</div>
+      <div class="rap-page">Seite 1 von 1</div>
+    </div>
+    <div class="rap-meta">
+      <div><span>Pers.-Nr.</span><b>&nbsp;</b></div>
+      <div><span>Name</span><b>${esc(person)}</b></div>
+      <div><span>Datum</span><b>${formatDate(dateStr)}</b></div>
+    </div>
+    <table class="rap-table">
+      <thead><tr>
+        <th class="k">Kunde / Art der Arbeit</th>
+        <th>Auftrags-<br>Nr.</th><th>Pos.-<br>Nr.</th><th>Kosten-<br>stelle</th>
+        <th>Stunden</th><th>Spesen</th><th>Verpf./<br>Übern</th><th>Km<br>privat</th>
+        <th>Diverse</th><th>Unprod.<br>Arbeit</th><th>Absenz</th>
+      </tr></thead>
+      <tbody>${rows.join('')}</tbody>
+      <tfoot>
+        <tr class="rap-pause"><td class="k" colspan="4">Ausserordentliche Pause von: __________ bis: __________</td><td class="lbl">Total Std.</td><td class="num tot">${h2(total)}</td><td colspan="5"></td></tr>
+      </tfoot>
+    </table>
+    <div class="rap-sign">
+      <div>Visum: <span></span></div>
+      <div>Kontrolle: <span></span></div>
+      <div>Erfasst: <span></span></div>
+    </div>
+  </div>`;
+}
+
+function updateRapportPreview() {
+  $('#rapportPreview').innerHTML = buildRapportHtml($('#rapPerson').value, $('#rapDate').value);
+}
+
+function openRapport() {
+  const persons = rapportPersons();
+  $('#rapPerson').innerHTML = persons.map((p) => `<option ${me && p === me.name ? 'selected' : ''}>${esc(p)}</option>`).join('') || '<option>—</option>';
+  $('#rapDate').value = localDate(Date.now());
+  updateRapportPreview();
+  rapportDialog.showModal();
+}
+
+function printRapport() {
+  $('#rapportPrint').innerHTML = buildRapportHtml($('#rapPerson').value, $('#rapDate').value);
+  window.print();
+}
+
+$('#rapportBtn').addEventListener('click', openRapport);
+$('#rapPerson').addEventListener('change', updateRapportPreview);
+$('#rapDate').addEventListener('change', updateRapportPreview);
+$('#rapPrint').addEventListener('click', printRapport);
+$('#rapClose').addEventListener('click', () => rapportDialog.close());
+
 init();
