@@ -33,7 +33,7 @@ const STATIONS = [
 /* ---------------------------------------------------------------------------
  * Minimaler CSV-Parser (mit Anfuehrungszeichen-Unterstuetzung)
  * ------------------------------------------------------------------------- */
-function parseCsv(text) {
+function parseCsv(text, delim) {
   const rows = [];
   let row = [];
   let field = '';
@@ -46,7 +46,7 @@ function parseCsv(text) {
       else { field += c; }
     } else if (c === '"') {
       inQuotes = true;
-    } else if (c === ',') {
+    } else if (c === delim) {
       row.push(field); field = '';
     } else if (c === '\n') {
       row.push(field); rows.push(row); row = []; field = '';
@@ -58,6 +58,12 @@ function parseCsv(text) {
   }
   if (field.length || row.length) { row.push(field); rows.push(row); }
   return rows;
+}
+
+// Trennzeichen automatisch erkennen (Komma vs. Semikolon – CH-Excel nutzt oft ';').
+function detectDelimiter(text) {
+  const line = text.split('\n').find((l) => /Auftrags-?Nummer/i.test(l)) || text.split('\n')[0] || '';
+  return (line.split(';').length > line.split(',').length) ? ';' : ',';
 }
 
 /* "5.6.26" / "26.6.26" / "01.06.2026" -> "2026-06-05" */
@@ -90,7 +96,8 @@ function main() {
     console.error('Aufruf: node import-csv.js <pfad-zur-datei.csv>');
     process.exit(1);
   }
-  const rows = parseCsv(fs.readFileSync(file, 'utf8'));
+  const text = fs.readFileSync(file, 'utf8');
+  const rows = parseCsv(text, detectDelimiter(text));
 
   // Kopfzeile finden (enthaelt "Auftrags-Nummer")
   const headerIdx = rows.findIndex((r) => r.some((c) => /Auftrags-?Nummer/i.test(c)));
