@@ -29,9 +29,8 @@ const DATA_FILE = path.join(ROOT, 'data.json');
 /* CNC 511 / 512 sind Alternativen: ein Auftrag laeuft auf EINER CNC und geht
  * danach weiter (Bankraum / sonstiges). "next" steuert die "Weiter"-Knoepfe. */
 const DEFAULT_STATIONS = [
-  { id: 'warte',    name: 'Warteschlange', machine: 'bereit zur Bearbeitung',       color: '#0ea5e9', next: ['cnc511', 'cnc512'] },
-  { id: 'cnc511',   name: 'CNC 511',       machine: 'HOMAG CNC 511',                color: '#6366f1', next: ['kante', 'bankraum'] },
-  { id: 'cnc512',   name: 'CNC 512',       machine: 'HOMAG CNC 512',                color: '#8b5cf6', next: ['kante', 'bankraum'] },
+  { id: 'warte',    name: 'Warteschlange', machine: 'bereit zur Bearbeitung',       color: '#0ea5e9', next: ['cnc'] },
+  { id: 'cnc',      name: 'CNC',           machine: 'HOMAG CNC (511 / 512)',        color: '#6366f1', next: ['kante', 'bankraum'] },
   { id: 'kante',    name: 'Kantenleimen',  machine: 'Kantenleimmaschine (KLM)',     color: '#0ea5a4', next: ['bankraum', 'fertig'] },
   { id: 'bankraum', name: 'Bankraum',      machine: 'Montage / Weiterverarbeitung', color: '#f59e0b', next: ['kante', 'fertig'] },
   { id: 'fertig',   name: 'Fertig',        machine: 'erledigt',                     color: '#16a34a', next: [] },
@@ -57,8 +56,8 @@ function seedOrders() {
     history: [{ at: now, stationId: o.stationId, by: 'System', note: 'Auftrag angelegt' }],
   });
   return [
-    mk({ number: '2026-041', customer: 'Familie Meier',   title: 'Kueche Eiche massiv',       stationId: 'cnc511',   priority: 'hoch',   assignee: 'Reto',  due: isoIn(2) }),
-    mk({ number: '2026-039', customer: 'Architekt Huber',  title: 'Empfangstheke Praxis',      stationId: 'cnc512',   priority: 'normal', assignee: 'Sandra', due: isoIn(5), requires512: true }),
+    mk({ number: '2026-041', customer: 'Familie Meier',   title: 'Kueche Eiche massiv',       stationId: 'cnc',      priority: 'hoch',   assignee: 'Reto',  due: isoIn(2) }),
+    mk({ number: '2026-039', customer: 'Architekt Huber',  title: 'Empfangstheke Praxis',      stationId: 'cnc',      priority: 'normal', assignee: 'Sandra', due: isoIn(5), requires512: true }),
     mk({ number: '2026-044', customer: 'Restaurant Krone', title: '12x Tischplatten Nussbaum', stationId: 'warte',    priority: 'normal', assignee: '',      due: isoIn(8) }),
     mk({ number: '2026-035', customer: 'Familie Bolliger', title: 'Garderobe Flur',            stationId: 'bankraum', priority: 'tief',   assignee: 'Marco', due: isoIn(1) }),
     mk({ number: '2026-046', customer: 'Buero Lehmann',    title: 'Sideboard 3m',              stationId: 'warte',    priority: 'normal', assignee: '',      due: isoIn(12) }),
@@ -81,17 +80,31 @@ let state = loadState();
 
 function loadState() {
   db.open();
-  // Erststart: Stationen anlegen (ggf. aus alter data.json uebernehmen)
+  // Stationen kommen aus dem Code (Quelle der Wahrheit) -> bei jedem Start setzen,
+  // damit Aenderungen am Ablauf auch in bestehende Datenbanken uebernommen werden.
+  db.setStations(DEFAULT_STATIONS);
   const legacy = readLegacyJson();
-  if (db.counts().stations === 0) {
-    db.setStations(legacy && legacy.stations ? legacy.stations : DEFAULT_STATIONS);
-  }
   if (db.counts().orders === 0) {
     const orders = legacy && legacy.orders ? legacy.orders : seedOrders();
     orders.forEach((o) => db.upsertOrder(o));
     if (legacy) console.log(`Migration: ${orders.length} Auftraege aus data.json uebernommen.`);
   }
   seedUsers();                                   // Anmelde-Benutzer (ohne Passwort)
+
+  // Migration: alte Stationen (cnc511/cnc512) auf die gemeinsame 'cnc' umziehen
+  const stations = db.getStations();
+  const validIds = new Set(stations.map((s) => s.id));
+  const remap = { cnc511: 'cnc', cnc512: 'cnc' };
+  let migrated = 0;
+  for (const o of db.getOrders()) {
+    if (!validIds.has(o.stationId)) {
+      o.stationId = remap[o.stationId] || stations[0].id;
+      db.upsertOrder(o);
+      migrated++;
+    }
+  }
+  if (migrated) console.log(`Stations-Migration: ${migrated} Auftraege auf neue Stationen umgezogen.`);
+
   db.backup();                                   // Sicherung beim Start
   setInterval(() => db.backup(), 6 * 60 * 60 * 1000); // alle 6h
   return { stations: db.getStations(), orders: db.getOrders() };
@@ -329,10 +342,7 @@ const server = http.createServer(async (req, res) => {
       if (!b.title || !b.number) return send(res, 400, { error: 'Nummer und Titel sind erforderlich' });
       const now = Date.now();
       const req512 = requires512([b.title, b.object, b.notes].join(' '));
-      let stationId;
-      if (b.stationId && state.stations.some((s) => s.id === b.stationId)) stationId = b.stationId;
-      else if (req512 && state.stations.some((s) => s.id === 'cnc512')) stationId = 'cnc512';
-      else stationId = state.stations[0].id;
+      const stationId = (b.stationId && state.stations.some((s) => s.id === b.stationId)) ? b.stationId : state.stations[0].id;
       const order = {
         id: crypto.randomUUID(),
         number: String(b.number),
@@ -368,10 +378,6 @@ const server = http.createServer(async (req, res) => {
     if (!order) return send(res, 404, { error: 'Auftrag nicht gefunden' });
     const b = await readBody(req);
     if (!state.stations.some((s) => s.id === b.stationId)) return send(res, 400, { error: 'Unbekannte Station' });
-    // Kontur-Auftraege duerfen nicht auf CNC 511.
-    if (order.requires512 && b.stationId === 'cnc511') {
-      return send(res, 409, { error: 'Kontur-Auftrag: nur auf CNC 512 moeglich.' });
-    }
     const now = Date.now();
     order.stationId = b.stationId;
     order.updatedAt = now;

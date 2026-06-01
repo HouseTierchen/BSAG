@@ -180,14 +180,11 @@ function sortOrders(a, b) {
   return 0;
 }
 
-// Moegliche Folge-Stationen aus dem Fluss-Graph (Kontur-Auftraege ohne CNC 511).
+// Moegliche Folge-Stationen aus dem Fluss-Graph.
 function nextStations(o) {
   const st = stations.find((s) => s.id === o.stationId);
   const ids = (st && st.next) || [];
-  return ids
-    .filter((id) => !(o.requires512 && id === 'cnc511'))
-    .map((id) => stations.find((s) => s.id === id))
-    .filter(Boolean);
+  return ids.map((id) => stations.find((s) => s.id === id)).filter(Boolean);
 }
 
 function cardEl(o) {
@@ -254,12 +251,6 @@ function dueTag(due) {
  * Aktionen
  * -------------------------------------------------------------------------- */
 async function moveOrder(id, stationId) {
-  const o = orders.find((x) => x.id === id);
-  // Kontur-Auftraege duerfen nicht auf CNC 511.
-  if (o && o.requires512 && stationId === 'cnc511') {
-    alert('Dieser Auftrag enthält "Kontur" und kann nur auf der CNC 512 gefertigt werden.');
-    return;
-  }
   const by = rememberName();
   await fetch(`/api/orders/${id}/move`, {
     method: 'POST',
@@ -389,12 +380,12 @@ function refreshDetail() {
       <dt>Objekt</dt><dd>${esc(o.object || '—')}</dd>
       <dt>Station</dt><dd>
         <select class="station-move">
-          ${stations.map((s) => `<option value="${s.id}" ${s.id === o.stationId ? 'selected' : ''} ${o.requires512 && s.id === 'cnc511' ? 'disabled' : ''}>${esc(s.name)}</option>`).join('')}
+          ${stations.map((s) => `<option value="${s.id}" ${s.id === o.stationId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
         </select>
       </dd>
       <dt>Prioritaet</dt><dd>${prioLabel(o.priority)}</dd>
       <dt>Aufwand</dt><dd>${o.effort ? esc(o.effort) + ' h' : '—'}</dd>
-      <dt>Maschine</dt><dd>${o.requires512 ? '🔒 nur CNC 512 (Kontur)' : 'CNC 511 oder 512'}</dd>
+      <dt>Maschine</dt><dd>${o.requires512 ? '🔒 nur CNC 512 (Konturkante)' : 'CNC (511 oder 512)'}</dd>
       <dt>Maschinist</dt><dd>${esc(o.assignee || '—')}</dd>
       <dt>Termin Rampe</dt><dd>${o.due ? formatDate(o.due) : '—'}</dd>
       <dt>Bemerkung</dt><dd>${esc(o.notes || '—')}</dd>
