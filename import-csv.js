@@ -18,14 +18,16 @@ const crypto = require('crypto');
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-/* Stationen passend zum heutigen Ablauf (CNC-zentriert).
- * 511 / 512 = die beiden CNC-Maschinen, KLM = Kantenleimmaschine. */
+/* Stationen passend zum Ablauf.
+ * 511 / 512 = die beiden CNC-Maschinen (Alternativen, nicht nacheinander).
+ * Ein Auftrag laeuft auf EINER CNC und geht danach weiter (Bankraum / sonstiges).
+ * "next" = moegliche Folge-Stationen fuer die "Weiter"-Knoepfe. */
 const STATIONS = [
-  { id: 'warte',     name: 'Warteschlange',       machine: 'bereit zur Bearbeitung', color: '#0ea5e9' },
-  { id: 'cnc511',    name: 'CNC 511',             machine: 'HOMAG CNC 511',     color: '#6366f1' },
-  { id: 'cnc512',    name: 'CNC 512',             machine: 'HOMAG CNC 512',     color: '#8b5cf6' },
-  { id: 'klm',       name: 'Kantenleimen',        machine: 'KLM',               color: '#ec4899' },
-  { id: 'fertig',    name: 'Fertig (CNC)',        machine: 'erledigt',          color: '#16a34a' },
+  { id: 'warte',    name: 'Warteschlange', machine: 'bereit zur Bearbeitung',   color: '#0ea5e9', next: ['cnc511', 'cnc512'] },
+  { id: 'cnc511',   name: 'CNC 511',       machine: 'HOMAG CNC 511',            color: '#6366f1', next: ['bankraum'] },
+  { id: 'cnc512',   name: 'CNC 512',       machine: 'HOMAG CNC 512',            color: '#8b5cf6', next: ['bankraum'] },
+  { id: 'bankraum', name: 'Bankraum',      machine: 'Montage / Weiterverarbeitung', color: '#f59e0b', next: ['fertig'] },
+  { id: 'fertig',   name: 'Fertig',        machine: 'erledigt',                 color: '#16a34a', next: [] },
 ];
 
 /* ---------------------------------------------------------------------------

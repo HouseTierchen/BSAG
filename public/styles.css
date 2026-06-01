@@ -1,14 +1,17 @@
 :root {
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --panel-2: #273449;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --line: #334155;
-  --accent: #38bdf8;
+  --bg: #eef2f7;        /* heller, freundlicher Hintergrund */
+  --panel: #f5f7fa;     /* Spalten */
+  --panel-2: #ffffff;   /* Karten / Eingabefelder */
+  --text: #1f2937;      /* dunkles Schiefergrau, gut lesbar */
+  --muted: #6b7280;
+  --line: #e3e8ef;
+  --accent: #2f7df6;    /* freundliches Blau */
+  --accent-ink: #ffffff;
+  --soft: #eef4ff;      /* zarte Akzentflaeche */
   --hoch: #ef4444;
-  --normal: #38bdf8;
-  --tief: #64748b;
+  --normal: #2f7df6;
+  --tief: #9aa6b2;
+  --shadow: 0 1px 3px rgba(16, 24, 40, .08), 0 1px 2px rgba(16, 24, 40, .04);
 }
 
 * { box-sizing: border-box; }
@@ -29,9 +32,10 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  background: var(--panel);
+  padding: 12px 18px;
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -69,9 +73,9 @@ html, body {
   cursor: pointer;
   transition: filter .15s;
 }
-.btn:hover { filter: brightness(1.15); }
-.btn.primary { background: var(--accent); color: #04293b; border-color: transparent; font-weight: 600; }
-.btn.danger { background: #7f1d1d; border-color: #991b1b; color: #fecaca; }
+.btn:hover { filter: brightness(.97); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.btn.danger { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
 .btn.small { padding: 5px 9px; font-size: 13px; }
 .hidden { display: none !important; }
 
@@ -94,6 +98,7 @@ html, body {
   flex-direction: column;
   max-height: 100%;
   scroll-snap-align: start;
+  box-shadow: var(--shadow);
 }
 .column.dragover { outline: 3px dashed var(--accent); outline-offset: -3px; }
 .column-head {
@@ -110,7 +115,7 @@ html, body {
 .column-head .count {
   margin-left: auto;
   background: var(--accent);
-  color: #04293b;
+  color: var(--accent-ink);
   font-weight: 800;
   border-radius: 999px;
   padding: 3px 14px;
@@ -133,6 +138,7 @@ html, body {
   padding: 16px 18px;
   cursor: pointer;
   user-select: none;
+  box-shadow: var(--shadow);
 }
 .card:active { cursor: grabbing; }
 .card.prio-hoch { border-left-color: var(--hoch); }
@@ -145,14 +151,14 @@ html, body {
 .card .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .tag {
   font-size: 15px;
-  background: #0b1220;
+  background: #f1f5f9;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 5px 12px;
-  color: var(--muted);
+  color: #475569;
 }
-.tag.due-overdue { background: #450a0a; border-color: #7f1d1d; color: #fecaca; }
-.tag.due-soon { background: #422006; border-color: #92400e; color: #fde68a; }
+.tag.due-overdue { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+.tag.due-soon { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 .card .move {
   display: flex;
   justify-content: space-between;
@@ -161,22 +167,22 @@ html, body {
 }
 .card .move button {
   flex: 1;
-  background: #0b1220;
-  border: 1px solid var(--line);
-  color: var(--text);
+  background: var(--soft);
+  border: 1px solid #cdddfb;
+  color: #1d4ed8;
   border-radius: 10px;
   padding: 16px 10px;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   min-height: 56px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.card .move button:hover { background: #111c30; }
-.card .move button:active { background: #1a2740; }
-.card .move button:disabled { opacity: .25; cursor: default; }
+.card .move button:hover { background: #dbe8ff; }
+.card .move button:active { background: #c7daff; }
+.card .move button:disabled { opacity: .35; cursor: default; }
 
 /* ---------- Dialog ---------- */
 .dialog {
@@ -187,7 +193,8 @@ html, body {
   padding: 20px;
   width: min(560px, 94vw);
 }
-.dialog::backdrop { background: rgba(0,0,0,.6); }
+.dialog { box-shadow: 0 20px 50px rgba(16,24,40,.25); }
+.dialog::backdrop { background: rgba(30, 41, 59, .35); }
 .dialog h2 { margin: 0 0 14px; }
 .dialog label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
 .dialog label { font-size: 15px; }
@@ -236,13 +243,13 @@ html, body {
   min-height: 52px;
 }
 .flag-toggle input { width: 26px; height: 26px; margin: 0; accent-color: var(--accent); }
-.flag-toggle:has(input:checked) { border-color: var(--accent); background: #0b2535; }
+.flag-toggle:has(input:checked) { border-color: var(--accent); background: var(--soft); }
 /* Farbkodierung der Marker auf den Karten */
-.tag.flag-prozess { border-color: #ec4899; color: #f9a8d4; }
-.tag.flag-person  { border-color: #6366f1; color: #a5b4fc; }
-.tag.flag-status  { border-color: #f59e0b; color: #fde68a; }
+.tag.flag-prozess { background: #fce7f3; border-color: #f9a8d4; color: #be185d; }
+.tag.flag-person  { background: #e8eaff; border-color: #c7d0fe; color: #4338ca; }
+.tag.flag-status  { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 /* Kontur -> nur CNC 512 */
-.tag.tag-512 { background: #2e1065; border-color: #8b5cf6; color: #ddd6fe; font-weight: 700; }
+.tag.tag-512 { background: #ede9fe; border-color: #c4b5fd; color: #6d28d9; font-weight: 700; }
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {

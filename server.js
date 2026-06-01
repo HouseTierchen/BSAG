@@ -26,16 +26,14 @@ const DATA_FILE = path.join(ROOT, 'data.json');
  * Stammdaten: typische Stationen/Maschinen einer Schreinerei mit HOMAG-Park.
  * "machine" verweist auf die konkrete Maschine (oder Handarbeitsplatz).
  * -------------------------------------------------------------------------- */
+/* CNC 511 / 512 sind Alternativen: ein Auftrag laeuft auf EINER CNC und geht
+ * danach weiter (Bankraum / sonstiges). "next" steuert die "Weiter"-Knoepfe. */
 const DEFAULT_STATIONS = [
-  { id: 'zuschnitt', name: 'Zuschnitt',           machine: 'HOMAG SAWTEQ',          color: '#0ea5e9' },
-  { id: 'kante',     name: 'Kantenanleimen',      machine: 'HOMAG EDGETEQ',         color: '#6366f1' },
-  { id: 'cnc',       name: 'CNC-Bearbeitung',     machine: 'HOMAG CENTATEQ',        color: '#8b5cf6' },
-  { id: 'bohren',    name: 'Bohren / Beschlag',   machine: 'HOMAG DRILLTEQ',        color: '#a855f7' },
-  { id: 'oberflaeche', name: 'Oberflaeche',       machine: 'Lackiererei',           color: '#ec4899' },
-  { id: 'montage',   name: 'Montage / Korpus',    machine: 'Bankraum',              color: '#f59e0b' },
-  { id: 'qs',        name: 'Qualitaetskontrolle', machine: 'Pruefplatz',            color: '#14b8a6' },
-  { id: 'versand',   name: 'Versand / Montage',   machine: 'Auslieferung',          color: '#22c55e' },
-  { id: 'fertig',    name: 'Erledigt',            machine: 'Archiv',                color: '#16a34a' },
+  { id: 'warte',    name: 'Warteschlange', machine: 'bereit zur Bearbeitung',       color: '#0ea5e9', next: ['cnc511', 'cnc512'] },
+  { id: 'cnc511',   name: 'CNC 511',       machine: 'HOMAG CNC 511',                color: '#6366f1', next: ['bankraum'] },
+  { id: 'cnc512',   name: 'CNC 512',       machine: 'HOMAG CNC 512',                color: '#8b5cf6', next: ['bankraum'] },
+  { id: 'bankraum', name: 'Bankraum',      machine: 'Montage / Weiterverarbeitung', color: '#f59e0b', next: ['fertig'] },
+  { id: 'fertig',   name: 'Fertig',        machine: 'erledigt',                     color: '#16a34a', next: [] },
 ];
 
 /* Beispiel-Auftraege, damit das Board beim ersten Start nicht leer ist. */
@@ -48,6 +46,7 @@ function seedOrders() {
     customer: o.customer,
     title: o.title,
     stationId: o.stationId,
+    requires512: !!o.requires512,
     priority: o.priority || 'normal',     // 'hoch' | 'normal' | 'tief'
     assignee: o.assignee || '',
     due: o.due || null,                    // ISO-Datum (YYYY-MM-DD)
@@ -57,12 +56,12 @@ function seedOrders() {
     history: [{ at: now, stationId: o.stationId, by: 'System', note: 'Auftrag angelegt' }],
   });
   return [
-    mk({ number: '2026-041', customer: 'Familie Meier',  title: 'Kueche Eiche massiv',        stationId: 'cnc',        priority: 'hoch',   assignee: 'Reto',  due: isoIn(2) }),
-    mk({ number: '2026-039', customer: 'Architekt Huber', title: 'Empfangstheke Praxis',      stationId: 'kante',      priority: 'normal', assignee: 'Sandra', due: isoIn(5) }),
-    mk({ number: '2026-044', customer: 'Restaurant Krone', title: '12x Tischplatten Nussbaum', stationId: 'zuschnitt', priority: 'normal', assignee: '',      due: isoIn(8) }),
-    mk({ number: '2026-035', customer: 'Familie Bolliger', title: 'Garderobe Flur',           stationId: 'oberflaeche', priority: 'tief',  assignee: 'Marco', due: isoIn(1) }),
-    mk({ number: '2026-046', customer: 'Buero Lehmann',   title: 'Sideboard 3m',              stationId: 'zuschnitt',  priority: 'normal', assignee: '',      due: isoIn(12) }),
-    mk({ number: '2026-030', customer: 'Hotel Bahnhof',   title: 'Rezeption Umbau',           stationId: 'montage',    priority: 'hoch',   assignee: 'Reto',  due: isoIn(-1) }),
+    mk({ number: '2026-041', customer: 'Familie Meier',   title: 'Kueche Eiche massiv',       stationId: 'cnc511',   priority: 'hoch',   assignee: 'Reto',  due: isoIn(2) }),
+    mk({ number: '2026-039', customer: 'Architekt Huber',  title: 'Empfangstheke Praxis',      stationId: 'cnc512',   priority: 'normal', assignee: 'Sandra', due: isoIn(5), requires512: true }),
+    mk({ number: '2026-044', customer: 'Restaurant Krone', title: '12x Tischplatten Nussbaum', stationId: 'warte',    priority: 'normal', assignee: '',      due: isoIn(8) }),
+    mk({ number: '2026-035', customer: 'Familie Bolliger', title: 'Garderobe Flur',            stationId: 'bankraum', priority: 'tief',   assignee: 'Marco', due: isoIn(1) }),
+    mk({ number: '2026-046', customer: 'Buero Lehmann',    title: 'Sideboard 3m',              stationId: 'warte',    priority: 'normal', assignee: '',      due: isoIn(12) }),
+    mk({ number: '2026-030', customer: 'Hotel Bahnhof',    title: 'Rezeption Umbau',           stationId: 'fertig',   priority: 'hoch',   assignee: 'Reto',  due: isoIn(-1) }),
   ];
 }
 

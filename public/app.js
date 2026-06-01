@@ -128,15 +128,26 @@ function sortOrders(a, b) {
   return 0;
 }
 
-function cardEl(o) {
-  const idx = stations.findIndex((s) => s.id === o.stationId);
-  const prev = stations[idx - 1];
-  const next = stations[idx + 1];
+// Moegliche Folge-Stationen aus dem Fluss-Graph (Kontur-Auftraege ohne CNC 511).
+function nextStations(o) {
+  const st = stations.find((s) => s.id === o.stationId);
+  const ids = (st && st.next) || [];
+  return ids
+    .filter((id) => !(o.requires512 && id === 'cnc511'))
+    .map((id) => stations.find((s) => s.id === id))
+    .filter(Boolean);
+}
 
+function cardEl(o) {
   const el = document.createElement('article');
   el.className = `card prio-${o.priority}`;
   el.draggable = true;
   el.dataset.id = o.id;
+
+  const nexts = nextStations(o);
+  const moveButtons = nexts.length
+    ? `<div class="move">${nexts.map((s) => `<button class="mv" data-to="${s.id}">${esc(s.name)} ▶</button>`).join('')}</div>`
+    : '';
 
   el.innerHTML = `
     <div class="row1">
@@ -152,18 +163,14 @@ function cardEl(o) {
       ${o.requires512 ? '<span class="tag tag-512">🔒 nur 512 · Kontur</span>' : ''}
       ${flagTags(o.flags)}
     </div>
-    <div class="move">
-      <button class="prev" ${prev ? '' : 'disabled'} title="Zurueck">◀ ${prev ? esc(prev.name) : ''}</button>
-      <button class="next" ${next ? '' : 'disabled'} title="Weiter">${next ? esc(next.name) : ''} ▶</button>
-    </div>`;
+    ${moveButtons}`;
 
   el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', o.id));
   el.addEventListener('click', (e) => {
     if (e.target.closest('.move')) return;
     openDetail(o.id);
   });
-  el.querySelector('.prev').addEventListener('click', () => prev && moveOrder(o.id, prev.id));
-  el.querySelector('.next').addEventListener('click', () => next && moveOrder(o.id, next.id));
+  el.querySelectorAll('.mv').forEach((b) => b.addEventListener('click', () => moveOrder(o.id, b.dataset.to)));
   return el;
 }
 
@@ -325,7 +332,11 @@ function refreshDetail() {
     <div class="detail-sub">${esc(o.number)}${o.pos ? ` · Pos ${esc(o.pos)}` : ''} · ${esc(o.customer || '—')}</div>
     <dl class="detail-grid">
       <dt>Objekt</dt><dd>${esc(o.object || '—')}</dd>
-      <dt>Station</dt><dd>${esc(st ? `${st.name} (${st.machine})` : '?')}</dd>
+      <dt>Station</dt><dd>
+        <select class="station-move">
+          ${stations.map((s) => `<option value="${s.id}" ${s.id === o.stationId ? 'selected' : ''} ${o.requires512 && s.id === 'cnc511' ? 'disabled' : ''}>${esc(s.name)}</option>`).join('')}
+        </select>
+      </dd>
       <dt>Prioritaet</dt><dd>${prioLabel(o.priority)}</dd>
       <dt>Aufwand</dt><dd>${o.effort ? esc(o.effort) + ' h' : '—'}</dd>
       <dt>Maschine</dt><dd>${o.requires512 ? '🔒 nur CNC 512 (Kontur)' : 'CNC 511 oder 512'}</dd>
@@ -352,6 +363,9 @@ function refreshDetail() {
   $('#detailContent').querySelectorAll('input[data-flag]').forEach((cb) => {
     cb.addEventListener('change', () => toggleFlag(o, cb.dataset.flag, cb.checked));
   });
+  // Station frei umstellen (Korrekturen / zurueck)
+  const sel = $('#detailContent').querySelector('.station-move');
+  if (sel) sel.addEventListener('change', () => { const v = sel.value; sel.value = o.stationId; moveOrder(o.id, v); });
 }
 
 async function toggleFlag(order, key, value) {
