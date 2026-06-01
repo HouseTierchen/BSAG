@@ -31,7 +31,10 @@ const statusEl = $('#status');
 /* ----------------------------------------------------------------------------
  * Initiales Laden + Live-Verbindung
  * -------------------------------------------------------------------------- */
+let me = null; // angemeldeter Benutzer { name, role, username }
+
 async function init() {
+  if (!(await loadMe())) { showLogin(); return; }
   const res = await fetch('/api/state');
   const state = await res.json();
   stations = state.stations;
@@ -39,7 +42,56 @@ async function init() {
   render();
   connectLive();
   fillStationSelect();
+  applyRole();
 }
+
+/* ---- Anmeldung (ohne Passwort) ---- */
+async function loadMe() {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) return false;
+    me = await r.json();
+    showUserChip();
+    return true;
+  } catch (e) { return false; }
+}
+
+const ROLE_LABEL = { leitung: 'Leitung', av: 'AV', maschinist: 'Maschinist', montage: 'Montage' };
+
+function showUserChip() {
+  const chip = $('#userChip');
+  chip.textContent = `${me.name} · ${ROLE_LABEL[me.role] || me.role}`;
+  chip.classList.remove('hidden');
+  $('#logoutBtn').classList.remove('hidden');
+}
+
+async function showLogin() {
+  const dlg = $('#loginDialog');
+  let users = [];
+  try { users = await (await fetch('/api/users')).json(); } catch (e) { users = []; }
+  $('#loginUsers').innerHTML = users.map((u) =>
+    `<button class="btn login-user" data-u="${esc(u.username)}">
+       <span class="lu-name">${esc(u.name)}</span>
+       <span class="lu-role">${ROLE_LABEL[u.role] || u.role}</span>
+     </button>`).join('');
+  $('#loginUsers').querySelectorAll('.login-user').forEach((b) => b.addEventListener('click', async () => {
+    await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: b.dataset.u }) });
+    location.reload();
+  }));
+  dlg.showModal();
+}
+
+// Rollen: Leitung/AV duerfen Stammdaten; Maschinist/Montage nur Ablauf/Status/Zeit.
+function applyRole() {
+  const master = me && (me.role === 'leitung' || me.role === 'av');
+  $('#newOrderBtn').classList.toggle('hidden', !master);
+  $('#editFromDetail').classList.toggle('hidden', !master);
+}
+
+$('#logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  location.reload();
+});
 
 function connectLive() {
   const es = new EventSource('/api/events');
@@ -217,6 +269,8 @@ async function moveOrder(id, stationId) {
 }
 
 function rememberName() {
+  // angemeldeter Benutzer hat Vorrang (Server setzt 'by' ohnehin verbindlich)
+  if (me && me.name) return me.name;
   let name = localStorage.getItem('bsag_user');
   if (!name) {
     name = prompt('Dein Name (wird im Verlauf festgehalten):') || 'Unbekannt';

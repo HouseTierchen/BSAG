@@ -35,8 +35,25 @@ function open() {
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY, data TEXT NOT NULL, updatedAt INTEGER
     );
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY, username TEXT UNIQUE, name TEXT, role TEXT, salt TEXT, hash TEXT
+    );
   `);
   return db;
+}
+
+/* ---- Benutzer ---- */
+function countUsers() { return db.prepare('SELECT COUNT(*) c FROM users').get().c; }
+function getUserByName(username) {
+  return db.prepare('SELECT * FROM users WHERE username = ?').get(String(username || '').toLowerCase());
+}
+function getUserById(id) { return db.prepare('SELECT * FROM users WHERE id = ?').get(id); }
+function listUsers() {
+  return db.prepare('SELECT id, username, name, role FROM users ORDER BY name').all();
+}
+function upsertUser(u) {
+  db.prepare('INSERT OR REPLACE INTO users (id, username, name, role, salt, hash) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(u.id, u.username.toLowerCase(), u.name, u.role, u.salt, u.hash);
 }
 
 /* ---- Stationen ---- */
@@ -88,4 +105,7 @@ function backup() {
   }
 }
 
-module.exports = { open, setStations, getStations, getOrders, upsertOrder, deleteOrder, counts, backup, DB_FILE };
+module.exports = {
+  open, setStations, getStations, getOrders, upsertOrder, deleteOrder, counts, backup, DB_FILE,
+  countUsers, getUserByName, getUserById, listUsers, upsertUser,
+};

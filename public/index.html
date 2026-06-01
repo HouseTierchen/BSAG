@@ -22,6 +22,8 @@
         <option value="tief">Nur Tief</option>
       </select>
       <span id="status" class="status" title="Live-Verbindung">●</span>
+      <span id="userChip" class="user-chip hidden"></span>
+      <button id="logoutBtn" class="btn hidden" title="Abmelden">Abmelden</button>
       <button id="scanBtn" class="btn" title="Auftragsmappe scannen">📷 Scan</button>
       <button id="kpiBtn" class="btn" title="Auswertung / Kennzahlen">📊 Auswertung</button>
       <button id="exportBtn" class="btn" title="Als CSV fuer Excel exportieren">⬇ Export</button>
@@ -98,6 +100,13 @@
       <span class="spacer"></span>
       <button type="button" id="closeDetail" class="btn primary">Schliessen</button>
     </div>
+  </dialog>
+
+  <!-- Anmeldung (ohne Passwort) -->
+  <dialog id="loginDialog" class="dialog">
+    <h2>Anmelden</h2>
+    <p class="scan-hint">Bitte auswählen, wer du bist:</p>
+    <div id="loginUsers" class="login-users"></div>
   </dialog>
 
   <!-- Scanner -->

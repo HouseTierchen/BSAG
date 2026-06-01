@@ -27,6 +27,11 @@ alle Geräte sehen dieselben Daten **in Echtzeit**.
 - **Live-Sync** über alle Geräte, **Verlauf** je Auftrag, **Termin-Warnungen**,
   Suche/Filter, grosse fingerfreundliche Kacheln, helles Design.
 - **SQLite-Datenbank** mit **automatischem Backup** (kein externes Paket nötig).
+- **Anmeldung ohne Passwort** (Benutzer auswählen) mit **Rollen** (Leitung, AV,
+  Maschinist, Montage) – steuert, wer Stammdaten ändern darf.
+- **QR-/Barcode-Scan** der Auftragsmappe (Kamera) zum schnellen Öffnen eines Auftrags.
+- **Auto-Bereinigung:** erledigte Aufträge werden nach **7 Tagen** automatisch entfernt
+  (Backups bleiben erhalten).
 
 ---
 
@@ -81,6 +86,18 @@ Den **CSV-Export** aus der App (Knopf „⬇ Export") kann man umgekehrt in Exce
 > Bei laufendem Server diesen nach einem Abgleich kurz neu starten.
 
 ---
+
+## Anmeldung & Rollen
+
+Beim Öffnen wählt man **ohne Passwort** aus, wer man ist. Die Benutzer werden beim
+ersten Start angelegt (Leitung, AV, Schmid Daniel, Mühlethalter Herbert, Hunn Celin,
+Heuberger Markus, Montage) und lassen sich in der Datenbank anpassen.
+
+- **Leitung / AV:** Aufträge anlegen, bearbeiten, löschen – alles.
+- **Maschinist / Montage:** verschieben, Häkchen setzen, Zeiterfassung.
+
+Erledigte Aufträge werden **nach 7 Tagen automatisch** aus dem Board entfernt
+(die nächtlichen Backups enthalten sie weiterhin).
 
 ## Stationen / Maschinen anpassen
 

@@ -33,7 +33,7 @@ let html = read('public/index.html');
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview_v7';
+const __KEY = 'bsag_preview_v8';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
@@ -54,6 +54,12 @@ window.fetch = async (url, opts) => {
   const method = (opts.method || 'GET').toUpperCase();
   const body = opts.body ? JSON.parse(opts.body) : {};
   const now = Date.now();
+
+  // Vorschau ist immer als "Leitung" angemeldet (keine echte Anmeldung noetig)
+  if (url === '/api/me' && method === 'GET') return __resp({ name: 'Vorschau', role: 'leitung', username: 'vorschau' });
+  if (url === '/api/users' && method === 'GET') return __resp([{ username: 'vorschau', name: 'Vorschau', role: 'leitung' }]);
+  if (url === '/api/login' && method === 'POST') return __resp({ name: 'Vorschau', role: 'leitung', username: 'vorschau' });
+  if (url === '/api/logout' && method === 'POST') return __resp({ ok: true });
 
   if (url === '/api/state' && method === 'GET') return __resp(__store);
 

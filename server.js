@@ -90,6 +90,7 @@ function loadState() {
     orders.forEach((o) => db.upsertOrder(o));
     if (legacy) console.log(`Migration: ${orders.length} Auftraege aus data.json uebernommen.`);
   }
+  seedUsers();                                   // Anmelde-Benutzer (ohne Passwort)
   db.backup();                                   // Sicherung beim Start
   setInterval(() => db.backup(), 6 * 60 * 60 * 1000); // alle 6h
   return { stations: db.getStations(), orders: db.getOrders() };
@@ -102,6 +103,69 @@ function readLegacyJson() {
 // Einzelnen Auftrag dauerhaft sichern (write-through in die DB).
 function persist(order) {
   db.upsertOrder(order);
+}
+
+/* ----------------------------------------------------------------------------
+ * Benutzer / Anmeldung / Rollen
+ *   Rollen: 'leitung', 'av' (duerfen Auftraege anlegen/aendern/loeschen),
+ *           'maschinist', 'montage' (duerfen verschieben, Haekchen, Zeiten).
+ * -------------------------------------------------------------------------- */
+const SESSION_MS = 12 * 60 * 60 * 1000;       // 12h
+const sessions = new Map();                    // token -> { userId, expires }
+
+function newSession(userId) {
+  const t = crypto.randomBytes(24).toString('hex');
+  sessions.set(t, { userId, expires: Date.now() + SESSION_MS });
+  return t;
+}
+function parseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach((p) => {
+    const i = p.indexOf('=');
+    if (i > 0) out[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim());
+  });
+  return out;
+}
+function userFromReq(req) {
+  const t = parseCookies(req).bsag_session;
+  if (!t) return null;
+  const s = sessions.get(t);
+  if (!s || s.expires < Date.now()) { if (s) sessions.delete(t); return null; }
+  return db.getUserById(s.userId) || null;
+}
+const canMaster = (u) => !!u && (u.role === 'leitung' || u.role === 'av');
+
+function seedUsers() {
+  if (db.countUsers() > 0) return;
+  // Anmeldung ohne Passwort: man waehlt einfach aus, wer man ist.
+  [
+    ['leitung', 'Leitung', 'leitung'],
+    ['av', 'Arbeitsvorbereitung', 'av'],
+    ['scd', 'Schmid Daniel', 'maschinist'],
+    ['müh', 'Mühlethalter Herbert', 'maschinist'],
+    ['huc', 'Hunn Celin', 'maschinist'],
+    ['hem', 'Heuberger Markus', 'maschinist'],
+    ['montage', 'Montage', 'montage'],
+  ].forEach(([username, name, role]) => {
+    db.upsertUser({ id: crypto.randomUUID(), username, name, role, salt: '', hash: '' });
+  });
+  console.log('Benutzer angelegt (Anmeldung ohne Passwort): Leitung, AV, Schmid Daniel, Mühlethalter Herbert, Hunn Celin, Heuberger Markus, Montage.');
+}
+
+/* Erledigte Auftraege nach 7 Tagen automatisch entfernen (Backups bleiben). */
+function fertigTime(o) {
+  const f = [...(o.history || [])].reverse().find((h) => h.stationId === 'fertig');
+  return f ? f.at : (o.updatedAt || 0);
+}
+function cleanupFinished() {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const remove = state.orders.filter((o) => o.stationId === 'fertig' && fertigTime(o) < cutoff);
+  if (!remove.length) return;
+  const ids = new Set(remove.map((o) => o.id));
+  remove.forEach((o) => db.deleteOrder(o.id));
+  state.orders = state.orders.filter((o) => !ids.has(o.id));
+  remove.forEach((o) => broadcast('order:deleted', { id: o.id }));
+  console.log(`Auto-Bereinigung: ${remove.length} erledigte Auftraege (>7 Tage) entfernt.`);
 }
 
 /* ----------------------------------------------------------------------------
@@ -178,6 +242,32 @@ function requires512(text) {
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const method = req.method;
+  const me = userFromReq(req);
+
+  // --- Anmeldung (ohne Passwort: Benutzer auswaehlen) ---
+  if (url === '/api/users' && method === 'GET') {
+    return send(res, 200, db.listUsers());
+  }
+  if (url === '/api/login' && method === 'POST') {
+    const b = await readBody(req);
+    const u = db.getUserByName(b.username);
+    if (!u) return send(res, 401, { error: 'Unbekannter Benutzer' });
+    const token = newSession(u.id);
+    return send(res, 200, { name: u.name, role: u.role, username: u.username },
+      { 'Set-Cookie': `bsag_session=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MS / 1000}` });
+  }
+  if (url === '/api/logout' && method === 'POST') {
+    const t = parseCookies(req).bsag_session;
+    if (t) sessions.delete(t);
+    return send(res, 200, { ok: true }, { 'Set-Cookie': 'bsag_session=; HttpOnly; Path=/; Max-Age=0' });
+  }
+  if (url === '/api/me' && method === 'GET') {
+    if (!me) return send(res, 401, { error: 'nicht angemeldet' });
+    return send(res, 200, { name: me.name, role: me.role, username: me.username });
+  }
+
+  // Alle weiteren /api-Routen erfordern eine Anmeldung.
+  if (url.startsWith('/api/') && !me) return send(res, 401, { error: 'nicht angemeldet' });
 
   // --- Live-Stream (SSE) ---
   if (url === '/api/events' && method === 'GET') {
@@ -200,6 +290,7 @@ const server = http.createServer(async (req, res) => {
 
   // --- Auftrag anlegen ---
   if (url === '/api/orders' && method === 'POST') {
+    if (!canMaster(me)) return send(res, 403, { error: 'Keine Berechtigung (nur Leitung/AV)' });
     try {
       const b = await readBody(req);
       if (!b.title || !b.number) return send(res, 400, { error: 'Nummer und Titel sind erforderlich' });
@@ -226,7 +317,7 @@ const server = http.createServer(async (req, res) => {
         flags: b.flags || {},
         createdAt: now,
         updatedAt: now,
-        history: [{ at: now, stationId, by: b.by || 'Unbekannt', note: 'Auftrag angelegt' }],
+        history: [{ at: now, stationId, by: me.name, note: 'Auftrag angelegt' }],
       };
       state.orders.push(order);
       persist(order);
@@ -251,7 +342,7 @@ const server = http.createServer(async (req, res) => {
     const now = Date.now();
     order.stationId = b.stationId;
     order.updatedAt = now;
-    order.history.push({ at: now, stationId: b.stationId, by: b.by || 'Unbekannt', note: b.note || 'Station gewechselt' });
+    order.history.push({ at: now, stationId: b.stationId, by: me.name, note: b.note || 'Station gewechselt' });
     persist(order);
     broadcast('order:updated', order);
     return send(res, 200, order);
@@ -264,7 +355,12 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'PUT') {
       const b = await readBody(req);
-      for (const f of ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due', 'notes', 'flags', 'timeLogs']) {
+      const masterFields = ['number', 'pos', 'customer', 'object', 'title', 'effort', 'priority', 'assignee', 'due'];
+      // Stammdaten duerfen nur Leitung/AV aendern; flags/notes/timeLogs alle.
+      if (masterFields.some((f) => b[f] !== undefined) && !canMaster(me)) {
+        return send(res, 403, { error: 'Keine Berechtigung zum Bearbeiten der Stammdaten' });
+      }
+      for (const f of [...masterFields, 'notes', 'flags', 'timeLogs']) {
         if (b[f] !== undefined) order[f] = b[f];
       }
       // Kontur-Erkennung nach Textaenderung neu bestimmen
@@ -276,6 +372,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'DELETE') {
+      if (!canMaster(me)) return send(res, 403, { error: 'Keine Berechtigung (nur Leitung/AV)' });
       state.orders = state.orders.filter((o) => o.id !== order.id);
       db.deleteOrder(order.id);
       broadcast('order:deleted', { id: order.id });
@@ -291,4 +388,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`BSAG Leitstand laeuft auf http://localhost:${PORT}`);
+  cleanupFinished();                                   // erledigte >7 Tage entfernen
+  setInterval(cleanupFinished, 60 * 60 * 1000);        // stuendlich pruefen
 });
