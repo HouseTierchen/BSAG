@@ -23,6 +23,8 @@ alle Geräte sehen dieselben Daten **in Echtzeit**.
 - **Zeiterfassung** je Auftrag (Start/Stopp) → **Ist vs. Soll**-Stunden.
 - **Auswertung / KPIs:** Termintreue, Ø Durchlaufzeit, Stunden Ist/Soll,
   offene Last je Station.
+- **Excel/CSV-Import direkt in der Oberfläche** (Knopf „⬆ Import", Leitung/AV) –
+  `.xlsx` oder CSV hochladen, von überall, ohne SSH.
 - **CSV-Export** für den Abgleich zurück in die Excel.
 - **Tagesrapport (A5 quer)** nach Vorlage Bolliger Söhne AG: druckt pro Mitarbeiter
   und Tag die erfassten Stunden je Auftrag – direkt auf den Netzwerkdrucker.
@@ -74,8 +76,9 @@ docker compose up -d --build
 
 ## Excel-Abgleich
 
-Die App läuft **parallel zur Excel**. Ein Export der CNC-Liste als CSV lässt sich
-jederzeit abgleichen:
+Die App läuft **parallel zur Excel**. Am einfachsten geht der Abgleich direkt in der
+Oberfläche über den Knopf **„⬆ Import"** (Leitung/AV): `.xlsx` oder CSV hochladen –
+von jedem Gerät, ohne SSH. Alternativ per Kommandozeile:
 
 ```bash
 node import-csv.js <pfad-zur-datei.csv>

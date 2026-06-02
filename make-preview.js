@@ -34,7 +34,7 @@ let html = read('public/index.html');
 /* In-Browser-Ersatz fuer Server + Live-Verbindung: localStorage statt API. */
 const shim = `
 /* ---- Vorschau-Modus: ersetzt Server-API durch localStorage ---- */
-const __KEY = 'bsag_preview_v11';
+const __KEY = 'bsag_preview_v12';
 const __INITIAL = ${JSON.stringify(state)};
 let __store = (() => { try { return JSON.parse(localStorage.getItem(__KEY)) || __INITIAL; } catch (e) { return __INITIAL; } })();
 const __save = () => localStorage.setItem(__KEY, JSON.stringify(__store));
@@ -61,6 +61,7 @@ window.fetch = async (url, opts) => {
   if (url === '/api/users' && method === 'GET') return __resp([{ username: 'vorschau', name: 'Vorschau', role: 'leitung' }]);
   if (url === '/api/login' && method === 'POST') return __resp({ name: 'Vorschau', role: 'leitung', username: 'vorschau' });
   if (url === '/api/logout' && method === 'POST') return __resp({ ok: true });
+  if (url.indexOf('/api/import') === 0) return __resp({ error: 'Import nur im echten Betrieb (Server/NAS) – nicht in der Vorschau.' }, 400);
 
   if (url === '/api/state' && method === 'GET') return __resp(__store);
 

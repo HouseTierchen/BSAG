@@ -5,7 +5,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Nur die Laufzeit-Dateien ins Image
-COPY package.json server.js db.js import-csv.js make-preview.js ./
+COPY package.json server.js db.js homag.js importer.js import-csv.js make-preview.js ./
 COPY public ./public
 
 # Datenbank + Backups liegen auf einem persistenten Volume

@@ -75,6 +75,7 @@ function isoIn(days) {
  * -------------------------------------------------------------------------- */
 const db = require('./db');
 const homag = require('./homag');
+const importer = require('./importer');
 
 let state = loadState();
 
@@ -245,6 +246,16 @@ function findOrder(id) {
   return state.orders.find((o) => o.id === id);
 }
 
+// Rohdaten (Datei-Upload) einlesen, max. 25 MB.
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = []; let size = 0;
+    req.on('data', (c) => { size += c.length; if (size > 25e6) reject(new Error('Datei zu gross')); else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 // Routing-Regel: "Kontur"/"Konturkante" -> Auftrag muss auf CNC 512.
 function requires512(text) {
   return /kontur/i.test(text || '');
@@ -332,6 +343,27 @@ const server = http.createServer(async (req, res) => {
   // --- Gesamtzustand laden ---
   if (url === '/api/state' && method === 'GET') {
     return send(res, 200, state);
+  }
+
+  // --- Excel/CSV-Upload direkt in der Oberflaeche (nur Leitung/AV) ---
+  if (url.startsWith('/api/import') && method === 'POST') {
+    if (!canMaster(me)) return send(res, 403, { error: 'Keine Berechtigung (nur Leitung/AV)' });
+    try {
+      const name = new URL(req.url, 'http://localhost').searchParams.get('name') || 'import.csv';
+      const buf = await readRawBody(req);
+      if (!buf.length) return send(res, 400, { error: 'Keine Datei empfangen' });
+      const incoming = importer.rowsToOrders(importer.fileToRows(name, buf));
+      const { results, added, updated } = importer.merge(state.orders, incoming);
+      for (const r of results) {
+        if (r.isNew) state.orders.push(r.order);
+        db.upsertOrder(r.order);
+        broadcast(r.isNew ? 'order:created' : 'order:updated', r.order);
+      }
+      console.log(`Web-Import (${name}): ${added} neu, ${updated} aktualisiert (${me.name}).`);
+      return send(res, 200, { ok: true, added, updated, total: incoming.length });
+    } catch (e) {
+      return send(res, 400, { error: 'Import fehlgeschlagen: ' + e.message });
+    }
   }
 
   // --- Auftrag anlegen ---

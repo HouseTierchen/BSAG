@@ -86,6 +86,7 @@ function applyRole() {
   const master = me && (me.role === 'leitung' || me.role === 'av');
   $('#newOrderBtn').classList.toggle('hidden', !master);
   $('#editFromDetail').classList.toggle('hidden', !master);
+  $('#importBtn').classList.toggle('hidden', !master);
 }
 
 $('#logoutBtn').addEventListener('click', async () => {
@@ -583,6 +584,25 @@ function exportCsv() {
   URL.revokeObjectURL(a.href);
 }
 $('#exportBtn').addEventListener('click', exportCsv);
+
+/* ----------------------------------------------------------------------------
+ * Excel/CSV-Import direkt in der Oberflaeche (Leitung/AV)
+ * -------------------------------------------------------------------------- */
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const res = await fetch(`/api/import?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.error || 'Import fehlgeschlagen');
+    alert(`Import erfolgreich:\n${r.added} neu, ${r.updated} aktualisiert (${r.total} Zeilen).`);
+  } catch (err) {
+    alert('Import fehlgeschlagen: ' + err.message);
+  } finally {
+    e.target.value = ''; // gleiche Datei erneut waehlbar
+  }
+});
 
 /* ----------------------------------------------------------------------------
  * Scanner – liest QR/Barcode der Auftragsmappe (BarcodeDetector) + manuelle Suche
