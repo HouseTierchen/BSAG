@@ -87,6 +87,8 @@ function applyRole() {
   $('#newOrderBtn').classList.toggle('hidden', !master);
   $('#editFromDetail').classList.toggle('hidden', !master);
   $('#importBtn').classList.toggle('hidden', !master);
+  // Tagesrapport braucht die Leitung nicht
+  $('#rapportBtn').classList.toggle('hidden', me && me.role === 'leitung');
 }
 
 $('#logoutBtn').addEventListener('click', async () => {
